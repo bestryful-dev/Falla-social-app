@@ -5,6 +5,7 @@ import connectMongoDB from "./db/connectMongoDB.js";
 
 dotenv.config();
 const app = express()
+app.use (express.json());
 
 // console.log(process.env.MONGO_URI)
 

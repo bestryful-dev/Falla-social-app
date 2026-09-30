@@ -5,13 +5,14 @@
   "main": "backend/server.js",
   "scripts": {
     "dev": "nodemon backend/server.js",
-    "start":"node backend/server.js"
+    "start": "node backend/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@uploadthing/shared": "^7.1.10",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.11.0",
     "cookie-parser": "^1.4.7",
@@ -19,7 +20,8 @@
     "dotenv": "^18.0.3",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.10.2"
+    "mongoose": "^9.10.2",
+    "uploadthing": "^7.7.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

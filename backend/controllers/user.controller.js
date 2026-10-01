@@ -4,9 +4,9 @@ import { UTApi } from "uploadthing/server";
 // Initialize the backend tool (It automatically reads your UPLOADTHING_TOKEN from .env)
 const utapi = new UTApi()
 
-// // models
-// import Notification from "../models/notification.model.js";
-// import User from "../models/user.model.js";
+// models
+import Notification from "../models/notification.model.js";
+import User from "../models/user.model.js";
 
 export const getUserProfile = async (req, res) => {
 	const { username } = req.params;

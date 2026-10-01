@@ -30,6 +30,24 @@ const postSchema = new mongoose.Schema(
 					ref: "User",
 					required: true,
 				},
+				createdAt: {
+					type: Date,
+					default: Date.now,
+				},
+			},
+		],
+		// Shared / Repost reference: if set, this post represents a share of original post
+		repostOf: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Post",
+			default: null,
+		},
+		// List of user IDs who shared/reposted this post
+		reposts: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "User",
+				default: [],
 			},
 		],
 	},

@@ -1,0 +1,219 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { User, Lock, ArrowRight, Sparkles, Shield, Zap, Eye, EyeOff } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import FallaLogo from "../../../components/common/FallaLogo";
+import LoadingSpinner from "../../../components/common/LoadingSpinner";
+import ThemeLanguageControls from "../../../components/common/ThemeLanguageControls";
+import { useLanguage } from "../../../context/LanguageContext";
+
+const LoginPage = () => {
+	const [formData, setFormData] = useState({
+		username: "",
+		password: "",
+	});
+	const [showPassword, setShowPassword] = useState(false);
+	const queryClient = useQueryClient();
+	const { t, isRTL } = useLanguage();
+
+	const {
+		mutate: loginMutation,
+		isPending,
+		isError,
+		error,
+	} = useMutation({
+		mutationFn: async ({ username, password }) => {
+			try {
+				const res = await fetch("/api/auth/login", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({ username, password }),
+				});
+
+				const data = await res.json();
+
+				if (!res.ok) {
+					throw new Error(data.error || "Something went wrong");
+				}
+			} catch (error) {
+				throw new Error(error);
+			}
+		},
+		onSuccess: () => {
+			// refetch the authUser
+			queryClient.invalidateQueries({ queryKey: ["authUser"] });
+		},
+	});
+
+	const handleSubmit = (e) => {
+		e.preventDefault();
+		loginMutation(formData);
+	};
+
+	const handleInputChange = (e) => {
+		setFormData({ ...formData, [e.target.name]: e.target.value });
+	};
+
+	return (
+		<div className='min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden bg-base-100 dark:bg-[#070a11] transition-colors duration-200'>
+			{/* Ambient Glowing Background Orbs */}
+			<div className='absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/15 dark:bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none' />
+			<div className='absolute -bottom-40 -right-40 w-96 h-96 bg-pink-600/15 dark:bg-pink-600/20 rounded-full blur-[120px] pointer-events-none' />
+			<div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[160px] pointer-events-none' />
+
+			{/* Floating Theme & Language controls on auth page */}
+			<div className='absolute top-4 right-4 z-20'>
+				<ThemeLanguageControls compact={false} showLabels={false} className='bg-base-200/80 dark:bg-surface-100/80 p-1.5 rounded-2xl border border-black/5 dark:border-white/10 backdrop-blur-md shadow-lg' />
+			</div>
+
+			<div className='w-full max-w-5xl rounded-3xl overflow-hidden glass-panel border border-black/10 dark:border-white/10 grid grid-cols-1 lg:grid-cols-12 shadow-2xl relative z-10'>
+				
+				{/* Left Hero Pane (Desktop) */}
+				<div className='hidden lg:flex lg:col-span-6 p-10 flex-col justify-between bg-gradient-to-br from-indigo-500/10 via-base-200 to-base-300 dark:from-indigo-950/40 dark:via-surface-100/60 dark:to-surface-200/40 ltr:border-r rtl:border-l border-black/10 dark:border-white/10 relative overflow-hidden text-start'>
+					
+					{/* Decorative background grid effect */}
+					<div className='absolute inset-0 bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none' />
+					
+					{/* Brand Header */}
+					<div className='relative z-10'>
+						<FallaLogo className='w-12 h-12' showText={true} textClassName='text-2xl' />
+					</div>
+
+					{/* Tagline Showcase */}
+					<div className='space-y-4 relative z-10 my-auto py-12'>
+						<div className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 text-xs font-semibold'>
+							<Sparkles className='w-3.5 h-3.5 text-indigo-500' />
+							<span>{t("brandTagline")}</span>
+						</div>
+						<h1 className='text-3xl xl:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight'>
+							{t("heroHeading")}
+						</h1>
+						<p className='text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-md'>
+							{t("heroSubheading")}
+						</p>
+
+						<div className='grid grid-cols-2 gap-3 pt-4'>
+							<div className='p-3 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/5 dark:border-white/[0.06] backdrop-blur-sm'>
+								<Zap className='w-4 h-4 text-amber-500 mb-1.5' />
+								<p className='text-xs font-bold text-slate-900 dark:text-white'>{t("realtimePulses")}</p>
+								<p className='text-[11px] text-slate-500 dark:text-slate-400'>{t("realtimePulsesDesc")}</p>
+							</div>
+							<div className='p-3 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/5 dark:border-white/[0.06] backdrop-blur-sm'>
+								<Shield className='w-4 h-4 text-emerald-500 mb-1.5' />
+								<p className='text-xs font-bold text-slate-900 dark:text-white'>{t("privacyCentered")}</p>
+								<p className='text-[11px] text-slate-500 dark:text-slate-400'>{t("privacyCenteredDesc")}</p>
+							</div>
+						</div>
+					</div>
+
+					{/* Left Footer */}
+					<div className='text-xs text-slate-500 relative z-10'>
+						© {new Date().getFullYear()} {isRTL ? "فلة سوشيال." : "Falla Social."} {t("rightsReserved")}
+					</div>
+				</div>
+
+				{/* Right Form Pane */}
+				<div className='lg:col-span-6 p-6 sm:p-10 flex flex-col justify-center bg-base-100/95 dark:bg-[#0e121c]/90 text-start'>
+					
+					{/* Mobile Brand Header */}
+					<div className='lg:hidden flex items-center justify-center mb-8'>
+						<FallaLogo className='w-10 h-10' showText={true} textClassName='text-xl' />
+					</div>
+
+					<div className='max-w-md mx-auto w-full'>
+						<div className='mb-6 text-center lg:text-start'>
+							<h2 className='text-2xl font-black text-slate-900 dark:text-white tracking-tight'>{t("welcomeBack")}</h2>
+							<p className='text-xs text-slate-500 dark:text-slate-400 mt-1'>{t("loginSubtitle")}</p>
+						</div>
+
+						{/* Form */}
+						<form className='flex flex-col gap-4' onSubmit={handleSubmit}>
+							
+							{/* Username */}
+							<div className='space-y-1.5'>
+								<label className='text-xs font-semibold text-slate-700 dark:text-slate-300'>{t("username")}</label>
+								<div className='relative flex items-center'>
+									<User className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`} />
+									<input
+										type='text'
+										required
+										className={`w-full glass-input rounded-2xl py-3 text-xs text-start ${isRTL ? "pr-10 pl-4" : "pl-10 pr-4"}`}
+										placeholder={t("usernamePlaceholder")}
+										name='username'
+										onChange={handleInputChange}
+										value={formData.username}
+									/>
+								</div>
+							</div>
+
+							{/* Password */}
+							<div className='space-y-1.5'>
+								<label className='text-xs font-semibold text-slate-700 dark:text-slate-300'>{t("currentPassword")}</label>
+								<div className='relative flex items-center'>
+									<Lock className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`} />
+									<input
+										type={showPassword ? "text" : "password"}
+										required
+										className={`w-full glass-input rounded-2xl py-3 text-xs text-start ${isRTL ? "pr-10 pl-10" : "pl-10 pr-10"}`}
+										placeholder={t("passwordPlaceholder")}
+										name='password'
+										onChange={handleInputChange}
+										value={formData.password}
+									/>
+									<button
+										type='button'
+										onClick={() => setShowPassword(!showPassword)}
+										className={`absolute ${isRTL ? "left-3.5" : "right-3.5"} text-slate-400 hover:text-slate-600 dark:hover:text-slate-200`}
+									>
+										{showPassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
+									</button>
+								</div>
+							</div>
+
+							{/* Submit Button */}
+							<button
+								type='submit'
+								disabled={isPending}
+								className='gradient-btn w-full py-3.5 rounded-2xl text-xs font-bold mt-2 flex items-center justify-center gap-2 shadow-glow'
+							>
+								{isPending ? (
+									<>
+										<LoadingSpinner size='xs' />
+										<span>{t("signingIn")}</span>
+									</>
+								) : (
+									<>
+										<span>{t("enterFallaSocial")}</span>
+										<ArrowRight className={`w-3.5 h-3.5 ${isRTL ? "rotate-180" : ""}`} />
+									</>
+								)}
+							</button>
+
+							{/* Error Banner */}
+							{isError && (
+								<div className='p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs text-center font-medium'>
+									{error.message}
+								</div>
+							)}
+						</form>
+
+						{/* Sign Up Redirect */}
+						<div className='mt-8 pt-6 border-t border-black/10 dark:border-white/[0.08] text-center'>
+							<p className='text-xs text-slate-500 dark:text-slate-400'>
+								{t("newToFalla")}{" "}
+								<Link to='/signup' className='font-bold text-indigo-500 hover:underline'>
+									{t("createAccountLink")}
+								</Link>
+							</p>
+						</div>
+					</div>
+				</div>
+
+			</div>
+		</div>
+	);
+};
+
+export default LoginPage;

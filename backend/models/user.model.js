@@ -102,6 +102,16 @@ const userSchema = new mongoose.Schema(
 				default: [],                          // Starts fresh with an empty history array list
 			},
 		],
+
+		// BOOKMARKED POSTS TRACKING
+		// Stores references to posts saved to the user's personal bookmarks collection
+		bookmarks: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "Post",
+				default: [],
+			},
+		],
 	},
 	
 	// 3. AUTOMATED METADATA CONFIGURATION

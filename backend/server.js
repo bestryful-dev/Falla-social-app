@@ -15,7 +15,7 @@ import connectMongoDB from "./db/connectMongoDB.js";
 dotenv.config();
 
 
-
+const app = express();
 
 app.use(cors({
     origin: ["http://localhost:3000", "https://falla-social-app.vercel.app"], // Add your actual vercel URL here when it's live
@@ -23,7 +23,7 @@ app.use(cors({
 }));
 
 
-const app = express();
+
 const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 

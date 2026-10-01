@@ -1,7 +1,24 @@
 import User from '../models/user.model.js'
 import bcrypt from 'bcryptjs';
 import {generateTokenAndSetCookie} from "../lib/utils/generateTokens.js"
+import nodemailer from "nodemailer";
 
+const sendVerificationEmail = async (email, code) => {
+    const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+
+    await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Falla App - Email Verification Code",
+        html: `<h3>Your verification code is: <b>${code}</b></h3><p>It expires in 10 minutes.</p>`,
+    });
+};
 
 export const signup = async (req,res)=>{
     try {
@@ -29,27 +46,40 @@ export const signup = async (req,res)=>{
         const salt = await bcrypt.genSalt(10)
         const hashedPassword = await bcrypt.hash(password, salt)
 
+        // Generate 6 digit OTP
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verificationCodeExpires = Date.now() + 10 * 60 * 1000; 
+
         const newUser = new User({
             fullName:fullName,
             username:username,
             email:email,
-            password:hashedPassword
+            password:hashedPassword,
+            verificationCode,
+            verificationCodeExpires,
+            isVerified: false,
         })
 
         if(newUser){
-            generateTokenAndSetCookie(newUser._id,res)
+            // generateTokenAndSetCookie(newUser._id,res)
             await newUser.save()
+            await sendVerificationEmail(email, verificationCode);
 
+            // res.status(201).json({
+            //     _id: newUser._id,
+            //     fullName: newUser.fullName,
+			// 	username: newUser.username,
+			// 	email: newUser.email,
+			// 	followers: newUser.followers,
+			// 	following: newUser.following,
+			// 	profileImg: newUser.profileImg,
+			// 	coverImg: newUser.coverImg,
+            // })
             res.status(201).json({
-                _id: newUser._id,
-                fullName: newUser.fullName,
-				username: newUser.username,
-				email: newUser.email,
-				followers: newUser.followers,
-				following: newUser.following,
-				profileImg: newUser.profileImg,
-				coverImg: newUser.coverImg,
-            })
+                message: "Verification code sent to your email",
+                email: newUser.email, // Pass the email so frontend can track it
+            });
+
         } else{
             res.status(400).json({error:"invalid user data"})
         }
@@ -61,6 +91,51 @@ export const signup = async (req,res)=>{
     } 
     
 }
+
+export const verifyEmail = async (req, res) => {
+    try {
+        const { email, code } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(400).json({ error: "User not found" });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({ error: "Email is already verified" });
+        }
+
+        if (!user.verificationCode || user.verificationCode !== code) {
+            return res.status(400).json({ error: "Invalid verification code" });
+        }
+
+        if (user.verificationCodeExpires < Date.now()) {
+            return res.status(400).json({ error: "Verification code has expired" });
+        }
+
+        user.isVerified = true;
+        user.verificationCode = undefined;
+        user.verificationCodeExpires = undefined;
+        await user.save();
+
+        // Now generate the token cookie so they are logged in!
+        generateTokenAndSetCookie(user._id, res);
+
+        res.status(200).json({
+            _id: user._id,
+            fullName: user.fullName,
+            username: user.username,
+            email: user.email,
+            followers: user.followers,
+            following: user.following,
+            profileImg: user.profileImg,
+            coverImg: user.coverImg,
+        });
+    } catch (error) {
+        console.log("Error in verifyEmail controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
 ///////////////
 export const login = async (req,res)=>{
 

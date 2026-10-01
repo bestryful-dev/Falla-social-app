@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://falla-social-app.onrender.com/api/$1"
+    }
+  ]
+}

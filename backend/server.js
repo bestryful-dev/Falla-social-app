@@ -8,10 +8,19 @@ import userRoutes from "./routes/user.route.js";
 import postRoutes from "./routes/post.route.js";
 import notificationRoutes from "./routes/notification.route.js";
 
+import cors from "cors";
+
 import connectMongoDB from "./db/connectMongoDB.js";
 
 dotenv.config();
 
+
+
+
+app.use(cors({
+    origin: ["http://localhost:3000", "https://falla-social-app.vercel.app"], // Add your actual vercel URL here when it's live
+    credentials: true
+}));
 
 
 const app = express();

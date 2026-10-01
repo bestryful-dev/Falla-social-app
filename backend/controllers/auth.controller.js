@@ -137,37 +137,44 @@ export const verifyEmail = async (req, res) => {
     }
 };
 ///////////////
-export const login = async (req,res)=>{
-
+export const login = async (req, res) => {
     try {
-        const {username,password}= req.body;
-        const user = await User.findOne({username:username})
-        const isPasswordCorrect = await bcrypt.compare(password, user?.password|| "")
+        const { username, password } = req.body; // Note: 'username' variable here can hold either username or email input from the form
 
-        if (!user||!isPasswordCorrect) {
-            return res.status(400).json({error:"invalid user name or password"})
+        // Find user by matching EITHER username OR email
+        const user = await User.findOne({
+            $or: [{ username: username }, { email: username }]
+        });
+
+        const isPasswordCorrect = await bcrypt.compare(password, user?.password || "");
+
+        if (!user || !isPasswordCorrect) {
+            return res.status(400).json({ error: "Invalid username/email or password" });
+        }
+
+        // Check if user has verified their email (from our previous step)
+        if (!user.isVerified) {
+            return res.status(400).json({ error: "Please verify your email before logging in." });
         }
 
         generateTokenAndSetCookie(user._id, res);
 
         res.status(200).json({
-			_id: user._id,
-			fullName: user.fullName,
-			username: user.username,
-			email: user.email,
-			followers: user.followers,
-			following: user.following,
-			profileImg: user.profileImg,
-			coverImg: user.coverImg,
-		});
-	
+            _id: user._id,
+            fullName: user.fullName,
+            username: user.username,
+            email: user.email,
+            followers: user.followers,
+            following: user.following,
+            profileImg: user.profileImg,
+            coverImg: user.coverImg,
+        });
         
     } catch (error) {
-        console.log("Error in signup controller", error.message);
-		res.status(500).json({ error: "Internal Server Error" });
+        console.log("Error in login controller", error.message);
+        res.status(500).json({ error: "Internal Server Error" });
     }
-    
-}
+};
 //////////////
 export const logout = async (req,res)=>{
     try {

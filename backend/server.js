@@ -1,4 +1,4 @@
-import path from "path";
+// import path from "path";
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -18,14 +18,14 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-    origin: ["http://localhost:3000", "https://falla-social-app.vercel.app"], // Add your actual vercel URL here when it's live
+    origin: true, // Add your actual vercel URL here when it's live
     credentials: true
 }));
 
 
 
 const PORT = process.env.PORT || 5000;
-const __dirname = path.resolve();
+// const __dirname = path.resolve();
 
 app.use(express.json({ limit: "5mb" })); // to parse req.body
 // limit shouldn't be too high to prevent DOS

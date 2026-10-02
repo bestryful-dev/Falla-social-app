@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import {generateTokenAndSetCookie} from "../lib/utils/generateTokens.js"
 import { Resend } from "resend";
 
+
 const getResendClient = () => {
     return new Resend(process.env.RESEND_API_KEY);
 };

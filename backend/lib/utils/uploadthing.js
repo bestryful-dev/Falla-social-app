@@ -16,7 +16,7 @@ export const uploadBase64Image = async (base64String) => {
 			throw new Error("Invalid base64 string provided");
 		}
 
-		// Extract MIME type and raw buffer
+		// Extract MIME type and raw base64 data
 		const matches = base64String.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
 		let mimeType = "image/png";
 		let buffer;
@@ -31,12 +31,10 @@ export const uploadBase64Image = async (base64String) => {
 		const extension = mimeType.split("/")[1] || "png";
 		const fileName = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
 
-		// ✅ Use UploadThing's official UTFile for Buffer compatibility in Node:
+		// Use UTFile for Node.js Buffer compatibility
 		const file = new UTFile([buffer], fileName, { type: mimeType });
 
 		const response = await utapi.uploadFiles([file]);
-
-		console.log("UploadThing API Response:", JSON.stringify(response, null, 2));
 
 		const uploadResult = Array.isArray(response) ? response[0] : response;
 

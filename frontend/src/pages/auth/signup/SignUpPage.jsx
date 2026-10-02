@@ -10,7 +10,9 @@ import {
   EyeOff,
   AtSign,
   ShieldCheck,
-} from "lucide-react"; // <--- Added ShieldCheck icon for OTP screen
+  Smartphone,
+  Download,
+} from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
@@ -27,7 +29,6 @@ const SignUpPage = () => {
     password: "",
   });
 
-  // <--- CHANGED: Added states to track the OTP verification screen step and store the registered email
   const [verificationStep, setVerificationStep] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -37,7 +38,6 @@ const SignUpPage = () => {
 
   const queryClient = useQueryClient();
 
-  // <--- CHANGED: Modified standard signup mutation to toggle verification view on success instead of logging in
   const { mutate, isError, isPending, error } = useMutation({
     mutationFn: async ({ email, username, fullName, password }) => {
       const res = await fetch("/api/auth/signup", {
@@ -54,12 +54,11 @@ const SignUpPage = () => {
       toast.success(
         t("accountCreatedToast") || "Verification code sent to your email!",
       );
-      setVerificationEmail(data.email); // Save email for the verification API request
-      setVerificationStep(true); // Switch form view to the 6-digit code entry screen
+      setVerificationEmail(data.email);
+      setVerificationStep(true);
     },
   });
 
-  // <--- NEW: Added a separate mutation to submit the 6-digit verification code to the backend
   const { mutate: verifyOtp, isPending: isVerifying } = useMutation({
     mutationFn: async ({ email, code }) => {
       const res = await fetch("/api/auth/verify-email", {
@@ -74,7 +73,7 @@ const SignUpPage = () => {
     },
     onSuccess: () => {
       toast.success("Email verified successfully!");
-      queryClient.invalidateQueries({ queryKey: ["authUser"] }); // Logs user in automatically via session/cookie
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
     },
   });
 
@@ -83,7 +82,6 @@ const SignUpPage = () => {
     mutate(formData);
   };
 
-  // <--- NEW: Handler function for submitting the OTP code form
   const handleVerifySubmit = (e) => {
     e.preventDefault();
     verifyOtp({ email: verificationEmail, code: otpCode });
@@ -173,7 +171,6 @@ const SignUpPage = () => {
           </div>
 
           <div className="max-w-md mx-auto w-full">
-            {/* <--- CHANGED: Conditional statement switches UI between regular inputs form vs code verification input */}
             {!verificationStep ? (
               <>
                 {/* Original Signup Form View */}
@@ -309,7 +306,6 @@ const SignUpPage = () => {
               </>
             ) : (
               <>
-                {/* <--- NEW: Verification Code Input Screen View */}
                 <div className="mb-6 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto mb-3">
                     <ShieldCheck className="w-6 h-6" />
@@ -362,8 +358,34 @@ const SignUpPage = () => {
               </>
             )}
 
+            {/* 📱 Download Android APK Button */}
+            <div className="mt-5">
+              <a
+                href="/falla-social.apk"
+                download="falla-social.apk"
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-base-200/60 dark:bg-surface-100/60 border border-black/5 dark:border-white/10 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Smartphone className="w-5 h-5" />
+                  </div>
+                  <div className="text-start">
+                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      {isRTL ? "تحميل تطبيق أندرويد" : "Download Android App"}
+                    </p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                      {isRTL ? "ملف APK مباشر للهاتف" : "Direct APK file for your phone"}
+                    </p>
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-base-100 dark:bg-surface-200 text-slate-500 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all shadow-sm">
+                  <Download className="w-4 h-4" />
+                </div>
+              </a>
+            </div>
+
             {/* Login Redirect */}
-            <div className="mt-6 pt-5 border-t border-black/10 dark:border-white/[0.08] text-center">
+            <div className="mt-5 pt-5 border-t border-black/10 dark:border-white/[0.08] text-center">
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {t("alreadyHaveAccount")}{" "}
                 <Link

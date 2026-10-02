@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { User, Lock, ArrowRight, Sparkles, Shield, Zap, Eye, EyeOff } from "lucide-react";
+import { User, Lock, ArrowRight, Sparkles, Shield, Zap, Eye, EyeOff, Smartphone, Download } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import FallaLogo from "../../../components/common/FallaLogo";
 import LoadingSpinner from "../../../components/common/LoadingSpinner";
@@ -42,7 +42,6 @@ const LoginPage = () => {
 			}
 		},
 		onSuccess: () => {
-			// refetch the authUser
 			queryClient.invalidateQueries({ queryKey: ["authUser"] });
 		},
 	});
@@ -72,16 +71,12 @@ const LoginPage = () => {
 				
 				{/* Left Hero Pane (Desktop) */}
 				<div className='hidden lg:flex lg:col-span-6 p-10 flex-col justify-between bg-gradient-to-br from-indigo-500/10 via-base-200 to-base-300 dark:from-indigo-950/40 dark:via-surface-100/60 dark:to-surface-200/40 ltr:border-r rtl:border-l border-black/10 dark:border-white/10 relative overflow-hidden text-start'>
-					
-					{/* Decorative background grid effect */}
 					<div className='absolute inset-0 bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none' />
 					
-					{/* Brand Header */}
 					<div className='relative z-10'>
 						<FallaLogo className='w-12 h-12' showText={true} textClassName='text-2xl' />
 					</div>
 
-					{/* Tagline Showcase */}
 					<div className='space-y-4 relative z-10 my-auto py-12'>
 						<div className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 text-xs font-semibold'>
 							<Sparkles className='w-3.5 h-3.5 text-indigo-500' />
@@ -108,7 +103,6 @@ const LoginPage = () => {
 						</div>
 					</div>
 
-					{/* Left Footer */}
 					<div className='text-xs text-slate-500 relative z-10'>
 						© {new Date().getFullYear()} {isRTL ? "فلة سوشيال." : "Falla Social."} {t("rightsReserved")}
 					</div>
@@ -130,7 +124,6 @@ const LoginPage = () => {
 
 						{/* Form */}
 						<form className='flex flex-col gap-4' onSubmit={handleSubmit}>
-							
 							{/* Username */}
 							<div className='space-y-1.5'>
 								<label className='text-xs font-semibold text-slate-700 dark:text-slate-300'>{t("username")}</label>
@@ -199,8 +192,34 @@ const LoginPage = () => {
 							)}
 						</form>
 
+						{/* 📱 Download Android APK Button */}
+						<div className='mt-6'>
+							<a
+								href='/falla-social.apk'
+								download='falla-social.apk'
+								className='w-full flex items-center justify-between p-3 rounded-2xl bg-base-200/60 dark:bg-surface-100/60 border border-black/5 dark:border-white/10 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all group'
+							>
+								<div className='flex items-center gap-3'>
+									<div className='w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform'>
+										<Smartphone className='w-5 h-5' />
+									</div>
+									<div className='text-start'>
+										<p className='text-xs font-bold text-slate-900 dark:text-slate-100'>
+											{isRTL ? "تحميل تطبيق أندرويد" : "Download Android App"}
+										</p>
+										<p className='text-[10px] text-slate-500 dark:text-slate-400'>
+											{isRTL ? "ملف APK مباشر للهاتف" : "Direct APK file for your phone"}
+										</p>
+									</div>
+								</div>
+								<div className='p-2 rounded-xl bg-base-100 dark:bg-surface-200 text-slate-500 group-hover:text-indigo-500 group-hover:translate-y-0.5 transition-all shadow-sm'>
+									<Download className='w-4 h-4' />
+								</div>
+							</a>
+						</div>
+
 						{/* Sign Up Redirect */}
-						<div className='mt-8 pt-6 border-t border-black/10 dark:border-white/[0.08] text-center'>
+						<div className='mt-6 pt-5 border-t border-black/10 dark:border-white/[0.08] text-center'>
 							<p className='text-xs text-slate-500 dark:text-slate-400'>
 								{t("newToFalla")}{" "}
 								<Link to='/signup' className='font-bold text-indigo-500 hover:underline'>

@@ -1,12 +1,9 @@
 import bcrypt from "bcryptjs";
-import { UTApi } from "uploadthing/server";
-
-// Initialize the backend tool (It automatically reads your UPLOADTHING_TOKEN from .env)
-const utapi = new UTApi()
 
 // models
 import Notification from "../models/notification.model.js";
 import User from "../models/user.model.js";
+import { uploadBase64Image, deleteUploadThingFile } from "../lib/utils/uploadthing.js";
 
 export const getUserProfile = async (req, res) => {
 	const { username } = req.params;
@@ -78,7 +75,6 @@ export const getSuggestedUsers = async (req, res) => {
 			{ $sample: { size: 10 } },
 		]);
 
-		// 1,2,3,4,5,6,
 		const filteredUsers = users.filter((user) => !usersFollowedByMe.following.includes(user._id));
 		const suggestedUsers = filteredUsers.slice(0, 4);
 
@@ -116,59 +112,21 @@ export const updateUser = async (req, res) => {
 			user.password = await bcrypt.hash(newPassword, salt);
 		}
 
-		// if (profileImg) {
-		// 	if (user.profileImg) {
-		// 		// https://res.cloudinary.com/dyfqon1v6/image/upload/v1712997552/zmxorcxexpdbh8r0bkjb.png
-		// 		await cloudinary.uploader.destroy(user.profileImg.split("/").pop().split(".")[0]);
-		// 	}
+		// 👤 HANDLE PROFILE IMAGE UPDATE
+		if (profileImg && profileImg.startsWith("data:")) {
+			if (user.profileImg) {
+				await deleteUploadThingFile(user.profileImg);
+			}
+			profileImg = await uploadBase64Image(profileImg);
+		}
 
-		// 	const uploadedResponse = await cloudinary.uploader.upload(profileImg);
-		// 	profileImg = uploadedResponse.secure_url;
-		// }
-
-		// if (coverImg) {
-		// 	if (user.coverImg) {
-		// 		await cloudinary.uploader.destroy(user.coverImg.split("/").pop().split(".")[0]);
-		// 	}
-
-		// 	const uploadedResponse = await cloudinary.uploader.upload(coverImg);
-		// 	coverImg = uploadedResponse.secure_url;
-		// }
-
-                // 👤 HANDLE PROFILE IMAGE UPDATE
-        if (profileImg) {
-            // Delete old profile image from the cloud if it exists
-            if (user.profileImg && user.profileImg.includes("utfs.io")) {
-                try {
-                    const oldProfileKey = user.profileImg.split("/").pop();
-                    await utapi.deleteFiles(oldProfileKey);
-                } catch (err) {
-                    console.log("Error deleting old profile img from cloud:", err.message);
-                }
-            }
-
-            // Upload the new image string to Uploadthing
-            const uploadedResponse = await utapi.uploadFiles(profileImg);
-            profileImg = uploadedResponse.data.url;
-        }
-
-        // 🖼️ HANDLE COVER IMAGE UPDATE
-        if (coverImg) {
-            // Delete old cover image from the cloud if it exists
-            if (user.coverImg && user.coverImg.includes("utfs.io")) {
-                try {
-                    const oldCoverKey = user.coverImg.split("/").pop();
-                    await utapi.deleteFiles(oldCoverKey);
-                } catch (err) {
-                    console.log("Error deleting old cover img from cloud:", err.message);
-                }
-            }
-
-            // Upload the new image string to Uploadthing
-            const uploadedResponse = await utapi.uploadFiles(coverImg);
-            coverImg = uploadedResponse.data.url;
-        }
-
+		// 🖼️ HANDLE COVER IMAGE UPDATE
+		if (coverImg && coverImg.startsWith("data:")) {
+			if (user.coverImg) {
+				await deleteUploadThingFile(user.coverImg);
+			}
+			coverImg = await uploadBase64Image(coverImg);
+		}
 
 		user.fullName = fullName || user.fullName;
 		user.email = email || user.email;
@@ -179,8 +137,6 @@ export const updateUser = async (req, res) => {
 		user.coverImg = coverImg || user.coverImg;
 
 		user = await user.save();
-
-		// password should be null in response
 		user.password = null;
 
 		return res.status(200).json(user);

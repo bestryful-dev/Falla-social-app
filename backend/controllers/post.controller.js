@@ -1,6 +1,7 @@
 import Notification from "../models/notification.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
+import { uploadBase64Image, deleteUploadThingFile } from "../lib/utils/uploadthing.js";
 
 // Helper for standard post population
 const populatePostQuery = (query) => {
@@ -36,8 +37,7 @@ export const createPost = async (req, res) => {
 		}
 
 		if (img) {
-			const uploadedResponse = await cloudinary.uploader.upload(img);
-			img = uploadedResponse.secure_url;
+			img = await uploadBase64Image(img);
 		}
 
 		const newPost = new Post({
@@ -67,13 +67,9 @@ export const deletePost = async (req, res) => {
 			return res.status(401).json({ error: "You are not authorized to delete this post" });
 		}
 
+		// ✅ Correct UploadThing image deletion:
 		if (post.img) {
-			try {
-				const imgId = post.img.split("/").pop().split(".")[0];
-				await cloudinary.uploader.destroy(imgId);
-			} catch (e) {
-				console.log("Image cleanup error: ", e);
-			}
+			await deleteUploadThingFile(post.img);
 		}
 
 		// If this post was a repost, update the original post's reposts array

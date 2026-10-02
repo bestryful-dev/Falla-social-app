@@ -39,6 +39,17 @@ app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+// 📱 Direct APK Download Route
+app.get("/falla-social.apk", (req, res) => {
+	const apkPath = path.resolve(__dirname, "frontend", "public", "falla-social.apk");
+	res.download(apkPath, "falla-social.apk", (err) => {
+		if (err) {
+			console.log("APK download error:", err);
+			res.status(404).send("APK file not found on server");
+		}
+	});
+});
+
 if (process.env.NODE_ENV === "production") {
 	app.use(express.static(path.join(__dirname, "/frontend/dist")));
 

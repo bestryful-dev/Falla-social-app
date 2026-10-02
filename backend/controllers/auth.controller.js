@@ -1,23 +1,40 @@
 import User from '../models/user.model.js'
 import bcrypt from 'bcryptjs';
 import {generateTokenAndSetCookie} from "../lib/utils/generateTokens.js"
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
+
+const getResendClient = () => {
+    return new Resend(process.env.RESEND_API_KEY);
+};
 
 const sendVerificationEmail = async (email, code) => {
-    const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    });
+    try {
+        const resend = getResendClient(); // Initializes here when the function runs (after dotenv has loaded)
+        
+        const { data, error } = await resend.emails.send({
+            from: "Falla Social <onboarding@resend.dev>",
+            to: [email],
+            subject: "Falla App - Email Verification Code",
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Welcome to Falla!</h2>
+                    <p>Your email verification code is:</p>
+                    <h1 style="color: #6366f1; letter-spacing: 2px;">${code}</h1>
+                    <p>This code will expire in 10 minutes.</p>
+                </div>
+            `,
+        });
 
-    await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "Falla App - Email Verification Code",
-        html: `<h3>Your verification code is: <b>${code}</b></h3><p>It expires in 10 minutes.</p>`,
-    });
+        if (error) {
+            console.error("Resend error:", error);
+            throw new Error(error.message);
+        }
+
+        console.log("Verification email sent successfully:", data);
+    } catch (error) {
+        console.log("Error in sendVerificationEmail:", error.message);
+        throw error;
+    }
 };
 
 export const signup = async (req,res)=>{

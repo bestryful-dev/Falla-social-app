@@ -22,7 +22,10 @@ const sendVerificationEmail = async (email, code) => {
 
 export const signup = async (req,res)=>{
     try {
-        const {fullName, username , email , password}= req.body;
+         const fullName = req.body.fullName?.trim();
+        const username = req.body.username?.trim().toLowerCase();
+        const email = req.body.email?.trim().toLowerCase();
+        const { password } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if(!emailRegex.test(email)){
@@ -139,8 +142,8 @@ export const verifyEmail = async (req, res) => {
 ///////////////
 export const login = async (req, res) => {
     try {
-        const { username, password } = req.body; // Note: 'username' variable here can hold either username or email input from the form
-
+        const username = req.body.username?.trim().toLowerCase();
+        const { password } = req.body;
         // Find user by matching EITHER username OR email
         const user = await User.findOne({
             $or: [{ username: username }, { email: username }]

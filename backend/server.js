@@ -16,6 +16,7 @@ dotenv.config();
 
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(cors({
     origin: true, // Add your actual vercel URL here when it's live

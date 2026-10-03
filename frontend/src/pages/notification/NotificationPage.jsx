@@ -1,25 +1,30 @@
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
-import { Bell, Heart, UserPlus, Repeat2, MoreVertical, Trash2, CheckCheck } from "lucide-react";
+import toast from "react-hot-toast"; // ✅ Fixed: default import
+import { Bell, Heart, UserPlus, Repeat2, MoreVertical, Trash2, CheckCheck, AlertCircle } from "lucide-react";
 
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { useLanguage } from "../../context/LanguageContext";
 
 const NotificationPage = () => {
 	const queryClient = useQueryClient();
-	const { t, isRTL } = useLanguage();
+	const { t } = useLanguage(); // ✅ Fixed: removed unused isRTL
 
-	const { data: notifications, isLoading } = useQuery({
+	const {
+		data: notifications,
+		isLoading,
+		isError,
+		error,
+	} = useQuery({
 		queryKey: ["notifications"],
 		queryFn: async () => {
 			try {
 				const res = await fetch("/api/notifications");
 				const data = await res.json();
-				if (!res.ok) throw new Error(data.error || "Something went wrong");
-				return data;
-			} catch (error) {
-				throw new Error(error);
+				if (!res.ok) throw new Error(data.error || "Failed to fetch notifications");
+				return Array.isArray(data) ? data : [];
+			} catch (err) {
+				throw new Error(err.message || "Something went wrong");
 			}
 		},
 	});
@@ -32,20 +37,25 @@ const NotificationPage = () => {
 				});
 				const data = await res.json();
 
-				if (!res.ok) throw new Error(data.error || "Something went wrong");
+				if (!res.ok) throw new Error(data.error || "Failed to clear notifications");
 				return data;
-			} catch (error) {
-				throw new Error(error);
+			} catch (err) {
+				throw new Error(err.message || "Something went wrong");
 			}
 		},
 		onSuccess: () => {
-			toast.success(t("notificationsClearedToast"));
+			toast.success(t("notificationsClearedToast") || "Notifications cleared");
 			queryClient.invalidateQueries({ queryKey: ["notifications"] });
 		},
-		onError: (error) => {
-			toast.error(error.message);
+		onError: (err) => {
+			toast.error(err.message);
 		},
 	});
+
+	// ✅ Filter only valid populated notifications
+	const validNotifications = Array.isArray(notifications)
+		? notifications.filter((n) => n && n.from && typeof n.from === "object")
+		: [];
 
 	return (
 		<div className='flex-1 ltr:border-r rtl:border-l border-black/10 dark:border-white/[0.08] min-h-screen max-w-2xl xl:max-w-3xl w-full transition-colors duration-200'>
@@ -58,10 +68,10 @@ const NotificationPage = () => {
 					</div>
 					<div className='text-start'>
 						<h1 className='font-bold text-base text-slate-900 dark:text-white leading-tight'>
-							{t("notificationsTitle")}
+							{t("notificationsTitle") || "Notifications"}
 						</h1>
 						<p className='text-[11px] text-slate-500 dark:text-slate-400'>
-							{t("notificationsSubtitle")}
+							{t("notificationsSubtitle") || "Stay updated with your community"}
 						</p>
 					</div>
 				</div>
@@ -82,11 +92,11 @@ const NotificationPage = () => {
 						<li>
 							<button
 								onClick={() => deleteNotifications()}
-								disabled={isDeleting || !notifications || notifications.length === 0}
-								className='text-xs text-rose-500 hover:bg-rose-500/10 flex items-center gap-2 py-2 font-semibold'
+								disabled={isDeleting || validNotifications.length === 0}
+								className='text-xs text-rose-500 hover:bg-rose-500/10 flex items-center gap-2 py-2 font-semibold disabled:opacity-40 disabled:cursor-not-allowed'
 							>
 								<Trash2 className='w-3.5 h-3.5' />
-								<span>{t("clearAllNotifications")}</span>
+								<span>{t("clearAllNotifications") || "Clear all notifications"}</span>
 							</button>
 						</li>
 					</ul>
@@ -100,32 +110,41 @@ const NotificationPage = () => {
 				</div>
 			)}
 
+			{/* Error State */}
+			{isError && (
+				<div className='flex flex-col items-center justify-center p-12 text-center'>
+					<AlertCircle className='w-8 h-8 text-rose-500 mb-2' />
+					<p className='text-xs text-rose-500 font-semibold'>{error?.message || "Failed to load notifications"}</p>
+				</div>
+			)}
+
 			{/* Empty State */}
-			{!isLoading && notifications?.length === 0 && (
+			{!isLoading && !isError && validNotifications.length === 0 && (
 				<div className='flex flex-col items-center justify-center p-16 text-center'>
 					<div className='w-16 h-16 rounded-3xl bg-base-200 dark:bg-surface-100 border border-black/5 dark:border-white/10 flex items-center justify-center text-slate-400 dark:text-slate-500 mb-3 shadow-inner'>
 						<CheckCheck className='w-8 h-8 text-emerald-500' />
 					</div>
 					<h3 className='font-bold text-slate-800 dark:text-slate-200 text-base'>
-						{t("allCaughtUp")}
+						{t("allCaughtUp") || "All caught up!"}
 					</h3>
 					<p className='text-xs text-slate-500 dark:text-slate-400 max-w-xs mt-1'>
-						{t("allCaughtUpDesc")}
+						{t("allCaughtUpDesc") || "No new notifications right now."}
 					</p>
 				</div>
 			)}
 
 			{/* Notifications List */}
-			{!isLoading && notifications && notifications.length > 0 && (
+			{!isLoading && !isError && validNotifications.length > 0 && (
 				<div className='divide-y divide-black/5 dark:divide-white/[0.04]'>
-					{notifications.map((notification) => {
+					{validNotifications.map((notification) => {
 						const isFollow = notification.type === "follow";
 						const isLike = notification.type === "like";
 						const isShare = notification.type === "share" || notification.type === "repost";
+						const sender = notification.from || {};
 
 						return (
 							<Link
-								to={`/profile/${notification.from.username}`}
+								to={`/profile/${sender.username || ""}`}
 								key={notification._id}
 								className='flex items-center gap-4 p-4 hover:bg-base-200/60 dark:hover:bg-surface-100/50 transition-colors duration-200 group'
 							>
@@ -151,8 +170,8 @@ const NotificationPage = () => {
 								{/* Sender Avatar */}
 								<div className='relative shrink-0'>
 									<img
-										src={notification.from.profileImg || "/avatar-placeholder.png"}
-										alt={notification.from.username}
+										src={sender.profileImg || "/avatar-placeholder.png"}
+										alt={sender.username || "User"}
 										className='w-10 h-10 rounded-2xl object-cover ring-2 ring-black/10 dark:ring-white/10 group-hover:ring-indigo-500/50 transition'
 									/>
 								</div>
@@ -161,22 +180,24 @@ const NotificationPage = () => {
 								<div className='flex-1 min-w-0 text-start'>
 									<p className='text-xs text-slate-800 dark:text-slate-200 leading-relaxed'>
 										<span className='font-bold text-slate-900 dark:text-white group-hover:text-indigo-500 dark:group-hover:text-indigo-300 transition'>
-											{notification.from.fullName}
+											{sender.fullName || sender.username || "Someone"}
 										</span>{" "}
-										<span className='text-slate-500 dark:text-slate-400 font-normal'>
-											@{notification.from.username}
-										</span>{" "}
+										{sender.username && (
+											<span className='text-slate-500 dark:text-slate-400 font-normal'>
+												@{sender.username}
+											</span>
+										)}{" "}
 										{isFollow ? (
 											<span className='text-indigo-600 dark:text-indigo-300 font-medium'>
-												{t("followedYou")}
+												{t("followedYou") || "followed you"}
 											</span>
 										) : isShare ? (
 											<span className='text-emerald-600 dark:text-emerald-400 font-medium'>
-												{t("sharedYourPost")}
+												{t("sharedYourPost") || "shared your post"}
 											</span>
 										) : (
 											<span className='text-rose-500 dark:text-rose-400 font-medium'>
-												{t("likedYourPost")}
+												{t("likedYourPost") || "liked your post"}
 											</span>
 										)}
 									</p>

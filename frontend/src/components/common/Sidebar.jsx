@@ -27,11 +27,11 @@ const Sidebar = () => {
 			}
 		},
 		onSuccess: () => {
-			toast.success(t("logoutSuccessToast"));
+			toast.success(t("logoutSuccessToast") || "Logged out successfully");
 			queryClient.invalidateQueries({ queryKey: ["authUser"] });
 		},
 		onError: () => {
-			toast.error(t("logoutFailedToast"));
+			toast.error(t("logoutFailedToast") || "Logout failed");
 		},
 	});
 
@@ -66,16 +66,16 @@ const Sidebar = () => {
 
 	return (
 		<aside className='w-16 md:w-60 lg:w-64 shrink-0'>
-			<div className='sticky top-0 h-screen flex flex-col justify-between p-3 md:p-4 ltr:border-r rtl:border-l border-black/10 dark:border-white/[0.08] bg-base-100/90 dark:bg-[#0d111a]/80 backdrop-blur-xl transition-colors duration-200'>
+			<div className='sticky top-0 h-screen flex flex-col justify-between p-2 sm:p-3 md:p-4 ltr:border-r rtl:border-l border-black/10 dark:border-white/[0.08] bg-base-100/90 dark:bg-[#0d111a]/80 backdrop-blur-xl transition-colors duration-200'>
 				
 				{/* Top section: Logo & Nav */}
 				<div className='flex flex-col gap-6'>
 					{/* Brand Logo Header */}
 					<Link
 						to='/'
-						className='flex items-center gap-3 px-2.5 py-2 rounded-2xl hover:bg-black/5 dark:hover:bg-white/[0.04] transition duration-200 group'
+						className='flex items-center gap-3 px-2.5 py-2 rounded-2xl hover:bg-black/5 dark:hover:bg-white/[0.04] transition duration-200 group justify-center md:justify-start'
 					>
-						<FallaLogo className='w- h-10' showText={true} textClassName='text-xl hidden md:block' />
+						<FallaLogo className='w-10 h-10' showText={true} textClassName='text-xl hidden md:block' />
 					</Link>
 
 					{/* Navigation Links */}
@@ -86,7 +86,7 @@ const Sidebar = () => {
 								<Link
 									key={item.to}
 									to={item.to}
-									className={`flex items-center gap-3.5 px-3 py-3 rounded-2xl font-semibold text-sm transition-all duration-200 group relative ${
+									className={`flex items-center justify-center md:justify-start gap-3.5 px-3 py-3 rounded-2xl font-semibold text-sm transition-all duration-200 group relative ${
 										item.active
 											? "bg-gradient-to-r from-indigo-600/20 to-purple-600/20 text-indigo-600 dark:text-white border border-indigo-500/30 shadow-sm dark:shadow-glow"
 											: "text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/[0.05]"
@@ -112,7 +112,7 @@ const Sidebar = () => {
 				</div>
 
 				{/* Bottom section: Theme / Language Switcher + User Profile Card */}
-				<div className='pt-3 border-t border-black/10 dark:border-white/[0.08] flex flex-col gap-3'>
+				<div className='pt-3 border-t border-black/10 dark:border-white/[0.08] flex flex-col gap-2 md:gap-3'>
 					{/* Theme and Language Controls */}
 					<div className='hidden md:flex items-center justify-between px-1 py-1'>
 						<ThemeLanguageControls compact={false} showLabels={true} />
@@ -123,20 +123,21 @@ const Sidebar = () => {
 						<ThemeLanguageControls compact={true} />
 					</div>
 
-					{/* User Card */}
+					{/* User Card: Stacks vertically on icon sidebar (w-16) and horizontally on desktop (md:w-60) */}
 					{authUser && (
-						<div className='flex items-center justify-between p-2 rounded-2xl bg-surface-100 dark:bg-surface-100/60 border border-black/5 dark:border-white/[0.05] hover:border-black/10 dark:hover:border-white/[0.1] transition duration-200 group'>
+						<div className='flex flex-col md:flex-row items-center justify-between p-1.5 md:p-2 rounded-2xl bg-surface-100 dark:bg-surface-100/60 border border-black/5 dark:border-white/[0.05] hover:border-black/10 dark:hover:border-white/[0.1] transition duration-200 gap-1.5 md:gap-0 group'>
 							<Link
 								to={`/profile/${authUser.username}`}
-								className='flex items-center gap-2.5 min-w-0 flex-1'
+								className='flex items-center justify-center md:justify-start gap-2.5 min-w-0 flex-1'
+								title={authUser.fullName}
 							>
 								<div className='relative shrink-0'>
 									<img
 										src={authUser.profileImg || "/avatar-placeholder.png"}
 										alt={authUser.username}
-										className='w-9 h-9 rounded-xl object-cover ring-2 ring-indigo-500/40'
+										className='w-8 h-8 md:w-9 md:h-9 rounded-xl object-cover ring-2 ring-indigo-500/40'
 									/>
-									<span className={`absolute -bottom-0.5 ${isRTL ? "-left-0.5" : "-right-0.5"} w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-base-100`} />
+									<span className={`absolute -bottom-0.5 ${isRTL ? "-left-0.5" : "-right-0.5"} w-2 h-2 md:w-2.5 md:h-2.5 bg-emerald-500 rounded-full ring-2 ring-base-100`} />
 								</div>
 								<div className='hidden md:flex flex-col min-w-0 text-start'>
 									<p className='text-xs font-bold text-slate-800 dark:text-white truncate leading-tight group-hover:text-indigo-500 dark:group-hover:text-indigo-300 transition'>
@@ -148,14 +149,15 @@ const Sidebar = () => {
 								</div>
 							</Link>
 
+							{/* Logout button: fully visible on all sidebar sizes */}
 							<button
 								onClick={(e) => {
 									e.preventDefault();
 									logout();
 								}}
 								disabled={isLoggingOut}
-								title={t("navLogout")}
-								className='p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition duration-200 shrink-0'
+								title={t("navLogout") || "Logout"}
+								className='p-1.5 md:p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition duration-200 shrink-0 flex items-center justify-center'
 							>
 								<LogOut className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
 							</button>

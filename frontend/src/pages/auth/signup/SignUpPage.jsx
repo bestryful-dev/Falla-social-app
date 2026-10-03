@@ -9,7 +9,6 @@ import {
   Eye,
   EyeOff,
   AtSign,
-  ShieldCheck,
   Smartphone,
   Download,
 } from "lucide-react";
@@ -29,15 +28,12 @@ const SignUpPage = () => {
     password: "",
   });
 
-  const [verificationStep, setVerificationStep] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
   const { t, isRTL } = useLanguage();
 
   const queryClient = useQueryClient();
 
+  // Signup Mutation -> Auto-login on success
   const { mutate, isError, isPending, error } = useMutation({
     mutationFn: async ({ email, username, fullName, password }) => {
       const res = await fetch("/api/auth/signup", {
@@ -50,29 +46,9 @@ const SignUpPage = () => {
       if (!res.ok) throw new Error(data.error || "Failed to create account");
       return data;
     },
-    onSuccess: (data) => {
-      toast.success(
-        t("accountCreatedToast") || "Verification code sent to your email!",
-      );
-      setVerificationEmail(data.email);
-      setVerificationStep(true);
-    },
-  });
-
-  const { mutate: verifyOtp, isPending: isVerifying } = useMutation({
-    mutationFn: async ({ email, code }) => {
-      const res = await fetch("/api/auth/verify-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Invalid verification code");
-      return data;
-    },
     onSuccess: () => {
-      toast.success("Email verified successfully!");
+      toast.success(t("accountCreatedToast") || "Account created successfully!");
+      // 🚀 Logs the user straight in:
       queryClient.invalidateQueries({ queryKey: ["authUser"] });
     },
   });
@@ -80,11 +56,6 @@ const SignUpPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     mutate(formData);
-  };
-
-  const handleVerifySubmit = (e) => {
-    e.preventDefault();
-    verifyOtp({ email: verificationEmail, code: otpCode });
   };
 
   const handleInputChange = (e) => {
@@ -98,7 +69,7 @@ const SignUpPage = () => {
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-600/15 dark:bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-pink-600/10 rounded-full blur-[160px] pointer-events-none" />
 
-      {/* Floating Theme & Language controls on auth page */}
+      {/* Floating Theme & Language controls */}
       <div className="absolute top-4 right-4 z-20">
         <ThemeLanguageControls
           compact={false}
@@ -171,192 +142,135 @@ const SignUpPage = () => {
           </div>
 
           <div className="max-w-md mx-auto w-full">
-            {!verificationStep ? (
-              <>
-                {/* Original Signup Form View */}
-                <div className="mb-6 text-center lg:text-start">
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                    {t("createAccountTitle")}
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    {t("signupSubtitle")}
-                  </p>
+            <div className="mb-6 text-center lg:text-start">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                {t("createAccountTitle")}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {t("signupSubtitle")}
+              </p>
+            </div>
+
+            <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {t("emailAddress")}
+                </label>
+                <div className="relative flex items-center">
+                  <Mail
+                    className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`}
+                  />
+                  <input
+                    type="email"
+                    required
+                    className={`w-full glass-input rounded-2xl py-2.5 text-xs text-start ${isRTL ? "pr-10 pl-4" : "pl-10 pr-4"}`}
+                    placeholder={t("emailPlaceholder")}
+                    name="email"
+                    onChange={handleInputChange}
+                    value={formData.email}
+                  />
                 </div>
+              </div>
 
-                <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {t("emailAddress")}
-                    </label>
-                    <div className="relative flex items-center">
-                      <Mail
-                        className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`}
-                      />
-                      <input
-                        type="email"
-                        required
-                        className={`w-full glass-input rounded-2xl py-2.5 text-xs text-start ${isRTL ? "pr-10 pl-4" : "pl-10 pr-4"}`}
-                        placeholder={t("emailPlaceholder")}
-                        name="email"
-                        onChange={handleInputChange}
-                        value={formData.email}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        {t("username")}
-                      </label>
-                      <div className="relative flex items-center">
-                        <AtSign
-                          className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`}
-                        />
-                        <input
-                          type="text"
-                          required
-                          className={`w-full glass-input rounded-2xl py-2.5 text-xs text-start ${isRTL ? "pr-10 pl-3" : "pl-10 pr-3"}`}
-                          placeholder={t("usernamePlaceholder")}
-                          name="username"
-                          onChange={handleInputChange}
-                          value={formData.username}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        {t("fullName")}
-                      </label>
-                      <div className="relative flex items-center">
-                        <User
-                          className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`}
-                        />
-                        <input
-                          type="text"
-                          required
-                          className={`w-full glass-input rounded-2xl py-2.5 text-xs text-start ${isRTL ? "pr-10 pl-3" : "pl-10 pr-3"}`}
-                          placeholder={t("fullNamePlaceholder")}
-                          name="fullName"
-                          onChange={handleInputChange}
-                          value={formData.fullName}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {t("currentPassword")}
-                    </label>
-                    <div className="relative flex items-center">
-                      <Lock
-                        className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`}
-                      />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        required
-                        className={`w-full glass-input rounded-2xl py-2.5 text-xs text-start ${isRTL ? "pr-10 pl-10" : "pl-10 pr-10"}`}
-                        placeholder={t("passwordPlaceholder")}
-                        name="password"
-                        onChange={handleInputChange}
-                        value={formData.password}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className={`absolute ${isRTL ? "left-3.5" : "right-3.5"} text-slate-400 hover:text-slate-600 dark:hover:text-slate-200`}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isPending}
-                    className="gradient-btn w-full py-3.5 rounded-2xl text-xs font-bold mt-2 flex items-center justify-center gap-2 shadow-glow"
-                  >
-                    {isPending ? (
-                      <>
-                        <LoadingSpinner size="xs" />
-                        <span>{t("creatingAccountButton")}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{t("createAccountButton")}</span>
-                        <ArrowRight
-                          className={`w-3.5 h-3.5 ${isRTL ? "rotate-180" : ""}`}
-                        />
-                      </>
-                    )}
-                  </button>
-
-                  {isError && (
-                    <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs text-center font-medium">
-                      {error.message}
-                    </div>
-                  )}
-                </form>
-              </>
-            ) : (
-              <>
-                <div className="mb-6 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto mb-3">
-                    <ShieldCheck className="w-6 h-6" />
-                  </div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                    Verify Your Email
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    We&apos;ve sent a 6-digit code to{" "}
-                    <span className="font-bold text-slate-700 dark:text-slate-200">
-                      {verificationEmail}
-                    </span>
-                  </p>
-                </div>
-
-                <form
-                  className="flex flex-col gap-4"
-                  onSubmit={handleVerifySubmit}
-                >
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Verification Code
-                    </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t("username")}
+                  </label>
+                  <div className="relative flex items-center">
+                    <AtSign
+                      className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`}
+                    />
                     <input
                       type="text"
-                      maxLength={6}
                       required
-                      className="w-full glass-input rounded-2xl py-3 text-center text-lg tracking-widest font-bold"
-                      placeholder="123456"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
+                      className={`w-full glass-input rounded-2xl py-2.5 text-xs text-start ${isRTL ? "pr-10 pl-3" : "pl-10 pr-3"}`}
+                      placeholder={t("usernamePlaceholder")}
+                      name="username"
+                      onChange={handleInputChange}
+                      value={formData.username}
                     />
                   </div>
+                </div>
 
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t("fullName")}
+                  </label>
+                  <div className="relative flex items-center">
+                    <User
+                      className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`}
+                    />
+                    <input
+                      type="text"
+                      required
+                      className={`w-full glass-input rounded-2xl py-2.5 text-xs text-start ${isRTL ? "pr-10 pl-3" : "pl-10 pr-3"}`}
+                      placeholder={t("fullNamePlaceholder")}
+                      name="fullName"
+                      onChange={handleInputChange}
+                      value={formData.fullName}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {t("currentPassword")}
+                </label>
+                <div className="relative flex items-center">
+                  <Lock
+                    className={`w-4 h-4 text-slate-400 absolute ${isRTL ? "right-3.5" : "left-3.5"}`}
+                  />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    className={`w-full glass-input rounded-2xl py-2.5 text-xs text-start ${isRTL ? "pr-10 pl-10" : "pl-10 pr-10"}`}
+                    placeholder={t("passwordPlaceholder")}
+                    name="password"
+                    onChange={handleInputChange}
+                    value={formData.password}
+                  />
                   <button
-                    type="submit"
-                    disabled={isVerifying}
-                    className="gradient-btn w-full py-3.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-glow"
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className={`absolute ${isRTL ? "left-3.5" : "right-3.5"} text-slate-400 hover:text-slate-600 dark:hover:text-slate-200`}
                   >
-                    {isVerifying ? (
-                      <>
-                        <LoadingSpinner size="xs" />
-                        <span>Verifying...</span>
-                      </>
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
                     ) : (
-                      <span>Verify Code</span>
+                      <Eye className="w-4 h-4" />
                     )}
                   </button>
-                </form>
-              </>
-            )}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isPending}
+                className="gradient-btn w-full py-3.5 rounded-2xl text-xs font-bold mt-2 flex items-center justify-center gap-2 shadow-glow"
+              >
+                {isPending ? (
+                  <>
+                    <LoadingSpinner size="xs" />
+                    <span>{t("creatingAccountButton")}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{t("createAccountButton")}</span>
+                    <ArrowRight
+                      className={`w-3.5 h-3.5 ${isRTL ? "rotate-180" : ""}`}
+                    />
+                  </>
+                )}
+              </button>
+
+              {isError && (
+                <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs text-center font-medium">
+                  {error.message}
+                </div>
+              )}
+            </form>
 
             {/* 📱 Download Android APK Button */}
             <div className="mt-5">

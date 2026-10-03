@@ -8,35 +8,35 @@ const getResendClient = () => {
     return new Resend(process.env.RESEND_API_KEY);
 };
 
-const sendVerificationEmail = async (email, code) => {
-    try {
-        const resend = getResendClient(); // Initializes here when the function runs (after dotenv has loaded)
+// const sendVerificationEmail = async (email, code) => {
+//     try {
+//         const resend = getResendClient(); // Initializes here when the function runs (after dotenv has loaded)
         
-        const { data, error } = await resend.emails.send({
-            from: "Falla Social <onboarding@resend.dev>",
-            to: [email],
-            subject: "Falla App - Email Verification Code",
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h2>Welcome to Falla!</h2>
-                    <p>Your email verification code is:</p>
-                    <h1 style="color: #6366f1; letter-spacing: 2px;">${code}</h1>
-                    <p>This code will expire in 10 minutes.</p>
-                </div>
-            `,
-        });
+//         const { data, error } = await resend.emails.send({
+//             from: "Falla Social <onboarding@resend.dev>",
+//             to: [email],
+//             subject: "Falla App - Email Verification Code",
+//             html: `
+//                 <div style="font-family: Arial, sans-serif; padding: 20px;">
+//                     <h2>Welcome to Falla!</h2>
+//                     <p>Your email verification code is:</p>
+//                     <h1 style="color: #6366f1; letter-spacing: 2px;">${code}</h1>
+//                     <p>This code will expire in 10 minutes.</p>
+//                 </div>
+//             `,
+//         });
 
-        if (error) {
-            console.error("Resend error:", error);
-            throw new Error(error.message);
-        }
+//         if (error) {
+//             console.error("Resend error:", error);
+//             throw new Error(error.message);
+//         }
 
-        console.log("Verification email sent successfully:", data);
-    } catch (error) {
-        console.log("Error in sendVerificationEmail:", error.message);
-        throw error;
-    }
-};
+//         console.log("Verification email sent successfully:", data);
+//     } catch (error) {
+//         console.log("Error in sendVerificationEmail:", error.message);
+//         throw error;
+//     }
+// };
 
 export const signup = async (req,res)=>{
     try {
@@ -82,24 +82,25 @@ export const signup = async (req,res)=>{
         })
 
         if(newUser){
-            // generateTokenAndSetCookie(newUser._id,res)
             await newUser.save()
-            await sendVerificationEmail(email, verificationCode);
+            generateTokenAndSetCookie(newUser._id,res)
+            
+            // await sendVerificationEmail(email, verificationCode);
 
-            // res.status(201).json({
-            //     _id: newUser._id,
-            //     fullName: newUser.fullName,
-			// 	username: newUser.username,
-			// 	email: newUser.email,
-			// 	followers: newUser.followers,
-			// 	following: newUser.following,
-			// 	profileImg: newUser.profileImg,
-			// 	coverImg: newUser.coverImg,
-            // })
             res.status(201).json({
-                message: "Verification code sent to your email",
-                email: newUser.email, // Pass the email so frontend can track it
-            });
+                _id: newUser._id,
+                fullName: newUser.fullName,
+				username: newUser.username,
+				email: newUser.email,
+				followers: newUser.followers,
+				following: newUser.following,
+				profileImg: newUser.profileImg,
+				coverImg: newUser.coverImg,
+            })
+            // res.status(201).json({
+            //     message: "Verification code sent to your email",
+            //     email: newUser.email, // Pass the email so frontend can track it
+            // });
 
         } else{
             res.status(400).json({error:"invalid user data"})
@@ -122,36 +123,36 @@ export const verifyEmail = async (req, res) => {
             return res.status(400).json({ error: "User not found" });
         }
 
-        if (user.isVerified) {
-            return res.status(400).json({ error: "Email is already verified" });
-        }
+        // if (user.isVerified) {
+        //     return res.status(400).json({ error: "Email is already verified" });
+        // }
 
-        if (!user.verificationCode || user.verificationCode !== code) {
-            return res.status(400).json({ error: "Invalid verification code" });
-        }
+        // if (!user.verificationCode || user.verificationCode !== code) {
+        //     return res.status(400).json({ error: "Invalid verification code" });
+        // }
 
-        if (user.verificationCodeExpires < Date.now()) {
-            return res.status(400).json({ error: "Verification code has expired" });
-        }
+        // if (user.verificationCodeExpires < Date.now()) {
+        //     return res.status(400).json({ error: "Verification code has expired" });
+        // }
 
         user.isVerified = true;
-        user.verificationCode = undefined;
-        user.verificationCodeExpires = undefined;
+        // user.verificationCode = undefined;
+        // user.verificationCodeExpires = undefined;
         await user.save();
 
         // Now generate the token cookie so they are logged in!
         generateTokenAndSetCookie(user._id, res);
-
-        res.status(200).json({
-            _id: user._id,
-            fullName: user.fullName,
-            username: user.username,
-            email: user.email,
-            followers: user.followers,
-            following: user.following,
-            profileImg: user.profileImg,
-            coverImg: user.coverImg,
-        });
+         res.status(200).json(user);
+        // res.status(200).json({
+        //     _id: user._id,
+        //     fullName: user.fullName,
+        //     username: user.username,
+        //     email: user.email,
+        //     followers: user.followers,
+        //     following: user.following,
+        //     profileImg: user.profileImg,
+        //     coverImg: user.coverImg,
+        //});
     } catch (error) {
         console.log("Error in verifyEmail controller", error.message);
         res.status(500).json({ error: "Internal server error" });
@@ -174,9 +175,9 @@ export const login = async (req, res) => {
         }
 
         // Check if user has verified their email (from our previous step)
-        if (!user.isVerified) {
-            return res.status(400).json({ error: "Please verify your email before logging in." });
-        }
+        // if (!user.isVerified) {
+        //     return res.status(400).json({ error: "Please verify your email before logging in." });
+        // }
 
         generateTokenAndSetCookie(user._id, res);
 

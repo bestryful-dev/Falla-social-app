@@ -78,7 +78,7 @@ export const signup = async (req,res)=>{
             password:hashedPassword,
             verificationCode,
             verificationCodeExpires,
-            isVerified: false,
+            isVerified: true,
         })
 
         if(newUser){

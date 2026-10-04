@@ -2,6 +2,7 @@ import express from "express";
 import { protectRoute } from "../middleware/protectRoute.js";
 import {
 	commentOnPost,
+	deleteComment, // 👈 Added
 	createPost,
 	deletePost,
 	getAllPosts,
@@ -26,6 +27,7 @@ router.post("/like/:id", protectRoute, likeUnlikePost);
 router.post("/bookmark/:id", protectRoute, bookmarkPost);
 router.post("/share/:id", protectRoute, sharePost);
 router.post("/comment/:id", protectRoute, commentOnPost);
+router.delete("/:postId/comments/:commentId", protectRoute, deleteComment); 
 router.delete("/:id", protectRoute, deletePost);
 
 export default router;

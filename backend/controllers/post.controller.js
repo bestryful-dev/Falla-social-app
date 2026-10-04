@@ -67,20 +67,16 @@ export const deletePost = async (req, res) => {
 			return res.status(401).json({ error: "You are not authorized to delete this post" });
 		}
 
-		// ✅ Correct UploadThing image deletion:
 		if (post.img) {
 			await deleteUploadThingFile(post.img);
 		}
 
-		// If this post was a repost, update the original post's reposts array
 		if (post.repostOf) {
 			await Post.findByIdAndUpdate(post.repostOf, { $pull: { reposts: req.user._id } });
 		} else {
-			// If it's an original post, remove all shares of it
 			await Post.deleteMany({ repostOf: post._id });
 		}
 
-		// Remove from bookmarks and likedPosts
 		await User.updateMany(
 			{ $or: [{ bookmarks: post._id }, { likedPosts: post._id }] },
 			{ $pull: { bookmarks: post._id, likedPosts: post._id } }
@@ -124,6 +120,38 @@ export const commentOnPost = async (req, res) => {
 	}
 };
 
+// 🗑️ DELETE COMMENT CONTROLLER
+export const deleteComment = async (req, res) => {
+	try {
+		const { postId, commentId } = req.params;
+		const userId = req.user._id.toString();
+
+		const post = await Post.findById(postId);
+		if (!post) {
+			return res.status(404).json({ error: "Post not found" });
+		}
+
+		const comment = post.comments.find((c) => c._id.toString() === commentId);
+		if (!comment) {
+			return res.status(404).json({ error: "Comment not found" });
+		}
+
+		// Authorization: only the comment author OR the post owner can delete
+		if (comment.user.toString() !== userId && post.user.toString() !== userId) {
+			return res.status(401).json({ error: "You are not authorized to delete this comment" });
+		}
+
+		post.comments = post.comments.filter((c) => c._id.toString() !== commentId);
+		await post.save();
+
+		const populatedPost = await populatePostQuery(Post.findById(postId));
+		res.status(200).json(populatedPost);
+	} catch (error) {
+		console.log("Error in deleteComment controller: ", error);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
 export const likeUnlikePost = async (req, res) => {
 	try {
 		const userId = req.user._id;
@@ -138,19 +166,16 @@ export const likeUnlikePost = async (req, res) => {
 		const userLikedPost = post.likes.some((id) => id.toString() === userId.toString());
 
 		if (userLikedPost) {
-			// Unlike post
 			await Post.updateOne({ _id: postId }, { $pull: { likes: userId } });
 			await User.updateOne({ _id: userId }, { $pull: { likedPosts: postId } });
 
 			const updatedLikes = post.likes.filter((id) => id.toString() !== userId.toString());
 			res.status(200).json(updatedLikes);
 		} else {
-			// Like post
 			post.likes.push(userId);
 			await User.updateOne({ _id: userId }, { $push: { likedPosts: postId } });
 			await post.save();
 
-			// Only send notification if liking someone else's post
 			if (post.user.toString() !== userId.toString()) {
 				const notification = new Notification({
 					from: userId,
@@ -187,12 +212,10 @@ export const bookmarkPost = async (req, res) => {
 		const isBookmarked = user.bookmarks && user.bookmarks.some((b) => b.toString() === postId.toString());
 
 		if (isBookmarked) {
-			// Remove bookmark
 			await User.findByIdAndUpdate(userId, { $pull: { bookmarks: postId } });
 			const updatedBookmarks = (user.bookmarks || []).filter((b) => b.toString() !== postId.toString());
 			return res.status(200).json({ isBookmarked: false, bookmarks: updatedBookmarks, message: "Post removed from bookmarks" });
 		} else {
-			// Add bookmark
 			await User.findByIdAndUpdate(userId, { $addToSet: { bookmarks: postId } });
 			const updatedBookmarks = [...(user.bookmarks || []), postId];
 			return res.status(200).json({ isBookmarked: true, bookmarks: updatedBookmarks, message: "Post saved to bookmarks" });
@@ -230,18 +253,15 @@ export const sharePost = async (req, res) => {
 			return res.status(404).json({ error: "Post not found" });
 		}
 
-		// If sharing a repost, resolve to the original post
 		const originalPostId = targetPost.repostOf ? targetPost.repostOf : targetPost._id;
 		const originalPost = await Post.findById(originalPostId);
 		if (!originalPost) {
 			return res.status(404).json({ error: "Original post not found" });
 		}
 
-		// Check if user already shared this post
 		const existingShare = await Post.findOne({ user: userId, repostOf: originalPostId });
 
 		if (existingShare) {
-			// Unshare / delete repost
 			await Post.findByIdAndDelete(existingShare._id);
 			await Post.findByIdAndUpdate(originalPostId, { $pull: { reposts: userId } });
 
@@ -250,7 +270,6 @@ export const sharePost = async (req, res) => {
 
 			return res.status(200).json({ isShared: false, repostCount, message: "Post unshared successfully" });
 		} else {
-			// Create new share post
 			const newShare = new Post({
 				user: userId,
 				repostOf: originalPostId,
@@ -259,7 +278,6 @@ export const sharePost = async (req, res) => {
 
 			await Post.findByIdAndUpdate(originalPostId, { $addToSet: { reposts: userId } });
 
-			// Send notification to original post owner if not sharing own post
 			if (originalPost.user.toString() !== userId.toString()) {
 				const notification = new Notification({
 					from: userId,

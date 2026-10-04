@@ -118,6 +118,25 @@ export const commentOnPost = async (req, res) => {
 		const newComment = populatedPost.comments[populatedPost.comments.length - 1];
 		io.emit("newComment", { postId, comment: newComment });
 
+		// 🔔 Create and send comment notification to post owner
+		if (post.user.toString() !== userId.toString()) {
+			const notification = new Notification({
+				from: userId,
+				to: post.user,
+				type: "comment",
+			});
+			await notification.save();
+
+			const receiverSocketId = getReceiverSocketId(post.user.toString());
+			if (receiverSocketId) {
+				const populatedNotification = await Notification.findById(notification._id).populate({
+					path: "from",
+					select: "username fullName profileImg",
+				});
+				io.to(receiverSocketId).emit("newNotification", populatedNotification);
+			}
+		}
+
 		res.status(200).json(populatedPost);
 	} catch (error) {
 		console.log("Error in commentOnPost controller: ", error);
@@ -205,7 +224,7 @@ export const likeUnlikePost = async (req, res) => {
 			}
 		}
 
-		// 🚀 Real-time like broadcast to all clients viewing the post
+		// 🚀 Real-time like broadcast
 		io.emit("postLikesUpdated", { postId, likes: updatedLikes });
 
 		res.status(200).json(updatedLikes);
@@ -215,6 +234,7 @@ export const likeUnlikePost = async (req, res) => {
 	}
 };
 
+// 🔖 BOOKMARK POST CONTROLLER
 export const bookmarkPost = async (req, res) => {
 	try {
 		const userId = req.user._id;

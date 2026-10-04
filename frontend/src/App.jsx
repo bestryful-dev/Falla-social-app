@@ -191,6 +191,7 @@ function App() {
 
 					<Link
 						to='/notifications'
+						onClick={() => queryClient.setQueryData(["unreadNotificationsCount"], 0)}
 						className={`flex flex-col items-center gap-1 p-1 rounded-xl relative transition ${
 							location.pathname === "/notifications" ? "text-indigo-500 font-bold" : "text-slate-500 dark:text-slate-400"
 						}`}

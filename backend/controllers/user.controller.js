@@ -1,9 +1,8 @@
 import bcrypt from "bcryptjs";
-
-// models
 import Notification from "../models/notification.model.js";
 import User from "../models/user.model.js";
 import { uploadBase64Image, deleteUploadThingFile } from "../lib/utils/uploadthing.js";
+import { io, getReceiverSocketId } from "../socket/socket.js"; // 👈 Sockets
 
 export const getUserProfile = async (req, res) => {
 	const { username } = req.params;
@@ -34,23 +33,31 @@ export const followUnfollowUser = async (req, res) => {
 		const isFollowing = currentUser.following.includes(id);
 
 		if (isFollowing) {
-			// Unfollow the user
 			await User.findByIdAndUpdate(id, { $pull: { followers: req.user._id } });
 			await User.findByIdAndUpdate(req.user._id, { $pull: { following: id } });
 
 			res.status(200).json({ message: "User unfollowed successfully" });
 		} else {
-			// Follow the user
 			await User.findByIdAndUpdate(id, { $push: { followers: req.user._id } });
 			await User.findByIdAndUpdate(req.user._id, { $push: { following: id } });
-			// Send notification to the user
+
+			// 🔔 Create Notification
 			const newNotification = new Notification({
 				type: "follow",
 				from: req.user._id,
 				to: userToModify._id,
 			});
-
 			await newNotification.save();
+
+			// 🚀 Real-time socket notification to receiver
+			const receiverSocketId = getReceiverSocketId(userToModify._id.toString());
+			if (receiverSocketId) {
+				const populatedNotification = await Notification.findById(newNotification._id).populate({
+					path: "from",
+					select: "username fullName profileImg",
+				});
+				io.to(receiverSocketId).emit("newNotification", populatedNotification);
+			}
 
 			res.status(200).json({ message: "User followed successfully" });
 		}
@@ -112,7 +119,6 @@ export const updateUser = async (req, res) => {
 			user.password = await bcrypt.hash(newPassword, salt);
 		}
 
-		// 👤 HANDLE PROFILE IMAGE UPDATE
 		if (profileImg && profileImg.startsWith("data:")) {
 			if (user.profileImg) {
 				await deleteUploadThingFile(user.profileImg);
@@ -120,7 +126,6 @@ export const updateUser = async (req, res) => {
 			profileImg = await uploadBase64Image(profileImg);
 		}
 
-		// 🖼️ HANDLE COVER IMAGE UPDATE
 		if (coverImg && coverImg.startsWith("data:")) {
 			if (user.coverImg) {
 				await deleteUploadThingFile(user.coverImg);

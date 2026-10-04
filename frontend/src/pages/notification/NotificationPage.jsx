@@ -1,15 +1,17 @@
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import toast from "react-hot-toast"; // ✅ Fixed: default import
-import { Bell, Heart, UserPlus, Repeat2, MoreVertical, Trash2, CheckCheck, AlertCircle } from "lucide-react";
+import toast from "react-hot-toast";
+import { useEffect } from "react";
+import { Bell, Heart, UserPlus, Repeat2, MessageCircle, MoreVertical, Trash2, CheckCheck, AlertCircle } from "lucide-react";
 
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { useLanguage } from "../../context/LanguageContext";
 
 const NotificationPage = () => {
 	const queryClient = useQueryClient();
-	const { t } = useLanguage(); // ✅ Fixed: removed unused isRTL
+	const { t } = useLanguage();
 
+	// 1. Fetch notifications
 	const {
 		data: notifications,
 		isLoading,
@@ -29,6 +31,12 @@ const NotificationPage = () => {
 		},
 	});
 
+	// 2. 🧹 Instantly reset the unread counter badge to 0 when opening this page
+	useEffect(() => {
+		queryClient.setQueryData(["unreadNotificationsCount"], 0);
+	}, [queryClient]);
+
+	// 3. Clear all mutation
 	const { mutate: deleteNotifications, isPending: isDeleting } = useMutation({
 		mutationFn: async () => {
 			try {
@@ -46,13 +54,13 @@ const NotificationPage = () => {
 		onSuccess: () => {
 			toast.success(t("notificationsClearedToast") || "Notifications cleared");
 			queryClient.invalidateQueries({ queryKey: ["notifications"] });
+			queryClient.setQueryData(["unreadNotificationsCount"], 0);
 		},
 		onError: (err) => {
 			toast.error(err.message);
 		},
 	});
 
-	// ✅ Filter only valid populated notifications
 	const validNotifications = Array.isArray(notifications)
 		? notifications.filter((n) => n && n.from && typeof n.from === "object")
 		: [];
@@ -140,14 +148,25 @@ const NotificationPage = () => {
 						const isFollow = notification.type === "follow";
 						const isLike = notification.type === "like";
 						const isShare = notification.type === "share" || notification.type === "repost";
+						const isComment = notification.type === "comment";
+						const isUnread = !notification.read;
 						const sender = notification.from || {};
 
 						return (
 							<Link
 								to={`/profile/${sender.username || ""}`}
 								key={notification._id}
-								className='flex items-center gap-4 p-4 hover:bg-base-200/60 dark:hover:bg-surface-100/50 transition-colors duration-200 group'
+								className={`flex items-center gap-4 p-4 transition-all duration-200 group relative ${
+									isUnread
+										? "bg-indigo-500/[0.06] dark:bg-indigo-500/[0.12] hover:bg-indigo-500/[0.1] dark:hover:bg-indigo-500/[0.16]"
+										: "hover:bg-base-200/60 dark:hover:bg-surface-100/50"
+								}`}
 							>
+								{/* 🔵 Unread Indicator Dot */}
+								{isUnread && (
+									<span className='absolute top-1/2 -translate-y-1/2 ltr:left-1 rtl:right-1 w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]' />
+								)}
+
 								{/* Notification Type Icon Badge */}
 								<div className='shrink-0'>
 									{isFollow && (
@@ -163,6 +182,11 @@ const NotificationPage = () => {
 									{isShare && (
 										<div className='w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform'>
 											<Repeat2 className='w-5 h-5' />
+										</div>
+									)}
+									{isComment && (
+										<div className='w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform'>
+											<MessageCircle className='w-5 h-5' />
 										</div>
 									)}
 								</div>
@@ -194,6 +218,10 @@ const NotificationPage = () => {
 										) : isShare ? (
 											<span className='text-emerald-600 dark:text-emerald-400 font-medium'>
 												{t("sharedYourPost") || "shared your post"}
+											</span>
+										) : isComment ? (
+											<span className='text-amber-600 dark:text-amber-400 font-medium'>
+												{t("commentedOnPost") || "commented on your post"}
 											</span>
 										) : (
 											<span className='text-rose-500 dark:text-rose-400 font-medium'>

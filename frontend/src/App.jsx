@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, Link, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 
 import HomePage from "./pages/home/HomePage";
 import LoginPage from "./pages/auth/login/LoginPage";
@@ -19,12 +20,14 @@ import LoadingSpinner from "./components/common/LoadingSpinner";
 import { Home, Bell, Bookmark, User, LogOut } from "lucide-react";
 import { useLanguage } from "./context/LanguageContext";
 import { useTheme } from "./context/ThemeContext";
+import { useSocket } from "./context/SocketContext"; // 👈 Sockets
 
 function App() {
 	const location = useLocation();
 	const queryClient = useQueryClient();
 	const { t, isRTL } = useLanguage();
 	const { isDark } = useTheme();
+	const { socket } = useSocket();
 
 	// 1. Fetch current logged-in user
 	const { data: authUser, isLoading } = useQuery({
@@ -45,7 +48,36 @@ function App() {
 		retry: false,
 	});
 
-	// 2. 🚪 Logout Mutation for Mobile Header
+	// 2. 🔔 Fetch unread notifications count for mobile view
+	const { data: unreadCount = 0 } = useQuery({
+		queryKey: ["unreadNotificationsCount"],
+		queryFn: async () => {
+			try {
+				const res = await fetch("/api/notifications/unread-count");
+				const data = await res.json();
+				return data?.count || 0;
+			} catch {
+				return 0;
+			}
+		},
+		enabled: !!authUser,
+	});
+
+	// 3. 🔔 Real-time notification socket listener for mobile
+	useEffect(() => {
+		if (!socket) return;
+
+		const handleNewNotification = () => {
+			queryClient.invalidateQueries({ queryKey: ["unreadNotificationsCount"] });
+			queryClient.invalidateQueries({ queryKey: ["notifications"] });
+		};
+
+		socket.on("newNotification", handleNewNotification);
+
+		return () => socket.off("newNotification", handleNewNotification);
+	}, [socket, queryClient]);
+
+	// 4. 🚪 Logout Mutation
 	const { mutate: logout, isPending: isLoggingOut } = useMutation({
 		mutationFn: async () => {
 			try {
@@ -81,19 +113,16 @@ function App() {
 	return (
 		<div className='min-h-screen bg-base-100 dark:bg-[#0b0f19] text-base-content flex flex-col justify-between transition-colors duration-200'>
 			
-			{/* 📱 Mobile Top Header (Visible on sm & md screens, hidden on desktop lg+) */}
+			{/* 📱 Mobile Top Header */}
 			{authUser && (
 				<header className='lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-2.5 bg-base-100/90 dark:bg-[#0d111a]/90 backdrop-blur-xl border-b border-black/10 dark:border-white/[0.08] transition-colors duration-200'>
-					{/* Brand Logo */}
 					<Link to='/' className='flex items-center gap-2'>
 						<FallaLogo className='w-8 h-8' showText={true} textClassName='text-lg' />
 					</Link>
 					
-					{/* Controls & Avatar & Logout Button */}
 					<div className='flex items-center gap-2'>
 						<ThemeLanguageControls compact={true} />
 						
-						{/* User Avatar Profile Link */}
 						<Link to={`/profile/${authUser.username}`} className='shrink-0'>
 							<img
 								src={authUser.profileImg || "/avatar-placeholder.png"}
@@ -102,7 +131,6 @@ function App() {
 							/>
 						</Link>
 
-						{/* 🚪 Mobile Logout Icon Button */}
 						<button
 							onClick={() => logout()}
 							disabled={isLoggingOut}
@@ -122,7 +150,7 @@ function App() {
 			{/* Main Layout Container */}
 			<div className='flex justify-center max-w-7xl mx-auto w-full flex-1'>
 				
-				{/* 🖥️ Desktop Sidebar (Only visible on lg+ screens, hidden on md & sm) */}
+				{/* 🖥️ Desktop Sidebar (Hidden on mobile/tablet) */}
 				{authUser && (
 					<div className="hidden lg:block shrink-0">
 						<Sidebar />
@@ -141,14 +169,14 @@ function App() {
 					</Routes>
 				</main>
 
-				{/* Desktop Right Panel (Hidden on small screens) */}
+				{/* Desktop Right Panel */}
 				{authUser && <RightPanel />}
 			</div>
 
 			{/* Global Footer */}
 			<Footer />
 
-			{/* 📱 Mobile Lower Bar Navigation (Visible on sm & md screens, hidden on desktop lg+) */}
+			{/* 📱 Mobile Lower Bar Navigation */}
 			{authUser && (
 				<nav className='lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-base-100/95 dark:bg-[#0d111a]/95 backdrop-blur-xl border-t border-black/10 dark:border-white/[0.08] flex items-center justify-around py-2 px-3 transition-colors duration-200 shadow-lg'>
 					<Link
@@ -163,11 +191,19 @@ function App() {
 
 					<Link
 						to='/notifications'
-						className={`flex flex-col items-center gap-1 p-1 rounded-xl transition ${
+						className={`flex flex-col items-center gap-1 p-1 rounded-xl relative transition ${
 							location.pathname === "/notifications" ? "text-indigo-500 font-bold" : "text-slate-500 dark:text-slate-400"
 						}`}
 					>
-						<Bell className='w-5 h-5' />
+						<div className='relative'>
+							<Bell className='w-5 h-5' />
+							{/* 🔔 Mobile Badge */}
+							{unreadCount > 0 && (
+								<span className='absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center animate-pulse shadow-sm'>
+									{unreadCount > 9 ? "9+" : unreadCount}
+								</span>
+							)}
+						</div>
 						<span className='text-[10px]'>{t("navNotifications")}</span>
 					</Link>
 

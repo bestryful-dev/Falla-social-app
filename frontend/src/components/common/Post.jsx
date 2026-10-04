@@ -1,45 +1,42 @@
 import { MessageCircle, Repeat2, Heart, Bookmark, Trash2, Send, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 import LoadingSpinner from "./LoadingSpinner";
 import { formatPostDate } from "../../utils/date";
 import { useLanguage } from "../../context/LanguageContext";
+import { useSocket } from "../../context/SocketContext";
 
 const Post = ({ post }) => {
+	// 1. All Hooks MUST be at the top level
+	const { socket } = useSocket();
 	const [comment, setComment] = useState("");
 	const { data: authUser } = useQuery({ queryKey: ["authUser"] });
 	const queryClient = useQueryClient();
 	const { t, isRTL, language } = useLanguage();
 
-	const isRepost = !!post.repostOf;
-	const displayPost = isRepost && post.repostOf._id ? post.repostOf : post;
-	const postOwner = displayPost.user || {};
-	const sharerUser = isRepost ? post.user : null;
+	const isRepost = !!post?.repostOf;
+	const displayPost = isRepost && post?.repostOf?._id ? post.repostOf : post;
+	const postOwner = displayPost?.user || {};
+	const sharerUser = isRepost ? post?.user : null;
+	const targetPostId = displayPost?._id;
 
-	const targetPostId = displayPost._id;
-	const isLiked = displayPost.likes?.some((id) => id.toString() === authUser?._id?.toString());
-	const isBookmarked = authUser?.bookmarks?.some((id) => id.toString() === targetPostId?.toString());
-	const isSharedByMe = displayPost.reposts?.some((id) => id.toString() === authUser?._id?.toString());
+	const isLiked = displayPost?.likes?.some((id) => id?.toString() === authUser?._id?.toString());
+	const isBookmarked = authUser?.bookmarks?.some((id) => id?.toString() === targetPostId?.toString());
+	const isSharedByMe = displayPost?.reposts?.some((id) => id?.toString() === authUser?._id?.toString());
+	const isMyPost = authUser?._id?.toString() === post?.user?._id?.toString();
+	const formattedDate = formatPostDate(displayPost?.createdAt, language);
 
-	const isMyPost = authUser?._id === post.user?._id;
-	const formattedDate = formatPostDate(displayPost.createdAt, language);
-
-	// Helper to update all post queries in the cache
-	const updatePostInCache = (updatedPostId, updaterFn) => {
+	// Helper to update all post queries in cache
+	const updatePostInCache = useCallback((updatedPostId, updaterFn) => {
 		queryClient.setQueriesData({ queryKey: ["posts"] }, (oldData) => {
 			if (!Array.isArray(oldData)) return oldData;
 			return oldData.map((p) => {
-				if (p._id === updatedPostId) {
-					return updaterFn(p);
-				}
+				if (p._id === updatedPostId) return updaterFn(p);
 				if (p.repostOf && p.repostOf._id === updatedPostId) {
-					return {
-						...p,
-						repostOf: updaterFn(p.repostOf),
-					};
+					return { ...p, repostOf: updaterFn(p.repostOf) };
 				}
 				return p;
 			});
@@ -48,27 +45,67 @@ const Post = ({ post }) => {
 		queryClient.setQueriesData({ queryKey: ["bookmarkedPosts"] }, (oldData) => {
 			if (!Array.isArray(oldData)) return oldData;
 			return oldData.map((p) => {
-				if (p._id === updatedPostId) {
-					return updaterFn(p);
-				}
+				if (p._id === updatedPostId) return updaterFn(p);
 				if (p.repostOf && p.repostOf._id === updatedPostId) {
-					return {
-						...p,
-						repostOf: updaterFn(p.repostOf),
-					};
+					return { ...p, repostOf: updaterFn(p.repostOf) };
 				}
 				return p;
 			});
 		});
-	};
+	}, [queryClient]);
 
-	// 1. DELETE POST MUTATION
+	// 2. Real-Time Listeners for Comments and Likes
+	useEffect(() => {
+		if (!socket || !targetPostId) return;
+
+		const handleNewComment = ({ postId: incomingPostId, comment: incomingComment }) => {
+			if (incomingPostId?.toString() === targetPostId?.toString()) {
+				updatePostInCache(targetPostId, (p) => {
+					const existingComments = p.comments || [];
+					const alreadyExists = existingComments.some((c) => c._id === incomingComment._id);
+					if (alreadyExists) return p;
+					return {
+						...p,
+						comments: [...existingComments, incomingComment],
+					};
+				});
+			}
+		};
+
+		const handleCommentDeleted = ({ postId: incomingPostId, commentId: deletedCommentId }) => {
+			if (incomingPostId?.toString() === targetPostId?.toString()) {
+				updatePostInCache(targetPostId, (p) => ({
+					...p,
+					comments: (p.comments || []).filter((c) => c._id !== deletedCommentId),
+				}));
+			}
+		};
+
+		const handleLikesUpdated = ({ postId: incomingPostId, likes: newLikes }) => {
+			if (incomingPostId?.toString() === targetPostId?.toString()) {
+				updatePostInCache(targetPostId, (p) => ({
+					...p,
+					likes: newLikes,
+				}));
+			}
+		};
+
+		socket.on("newComment", handleNewComment);
+		socket.on("commentDeleted", handleCommentDeleted);
+		socket.on("postLikesUpdated", handleLikesUpdated);
+
+		return () => {
+			socket.off("newComment", handleNewComment);
+			socket.off("commentDeleted", handleCommentDeleted);
+			socket.off("postLikesUpdated", handleLikesUpdated);
+		};
+	}, [socket, targetPostId, updatePostInCache]);
+
+	// 3. Mutations
 	const { mutate: deletePost, isPending: isDeleting } = useMutation({
 		mutationFn: async () => {
 			try {
-				const res = await fetch(`/api/posts/${post._id}`, {
-					method: "DELETE",
-				});
+				const res = await fetch(`/api/posts/${post._id}`, { method: "DELETE" });
 				const data = await res.json();
 				if (!res.ok) throw new Error(data.error || "Something went wrong");
 				return data;
@@ -86,13 +123,10 @@ const Post = ({ post }) => {
 		},
 	});
 
-	// 2. LIKE / UNLIKE MUTATION
 	const { mutate: likePost, isPending: isLiking } = useMutation({
 		mutationFn: async () => {
 			try {
-				const res = await fetch(`/api/posts/like/${targetPostId}`, {
-					method: "POST",
-				});
+				const res = await fetch(`/api/posts/like/${targetPostId}`, { method: "POST" });
 				const data = await res.json();
 				if (!res.ok) throw new Error(data.error || "Something went wrong");
 				return data;
@@ -106,9 +140,9 @@ const Post = ({ post }) => {
 
 			updatePostInCache(targetPostId, (p) => {
 				const currentLikes = p.likes || [];
-				const alreadyLiked = currentLikes.some((id) => id.toString() === userId.toString());
+				const alreadyLiked = currentLikes.some((id) => id?.toString() === userId.toString());
 				const newLikes = alreadyLiked
-					? currentLikes.filter((id) => id.toString() !== userId.toString())
+					? currentLikes.filter((id) => id?.toString() !== userId.toString())
 					: [...currentLikes, userId];
 				return { ...p, likes: newLikes };
 			});
@@ -126,13 +160,10 @@ const Post = ({ post }) => {
 		},
 	});
 
-	// 3. BOOKMARK / UNBOOKMARK MUTATION
 	const { mutate: toggleBookmark, isPending: isBookmarking } = useMutation({
 		mutationFn: async () => {
 			try {
-				const res = await fetch(`/api/posts/bookmark/${targetPostId}`, {
-					method: "POST",
-				});
+				const res = await fetch(`/api/posts/bookmark/${targetPostId}`, { method: "POST" });
 				const data = await res.json();
 				if (!res.ok) throw new Error(data.error || "Something went wrong");
 				return data;
@@ -144,15 +175,15 @@ const Post = ({ post }) => {
 			queryClient.setQueryData(["authUser"], (oldAuth) => {
 				if (!oldAuth) return oldAuth;
 				const currentBookmarks = oldAuth.bookmarks || [];
-				const alreadyBookmarked = currentBookmarks.some((id) => id.toString() === targetPostId.toString());
+				const alreadyBookmarked = currentBookmarks.some((id) => id?.toString() === targetPostId.toString());
 				const updatedBookmarks = alreadyBookmarked
-					? currentBookmarks.filter((id) => id.toString() !== targetPostId.toString())
+					? currentBookmarks.filter((id) => id?.toString() !== targetPostId.toString())
 					: [...currentBookmarks, targetPostId];
 				return { ...oldAuth, bookmarks: updatedBookmarks };
 			});
 		},
 		onSuccess: (data) => {
-			toast.success(data.isBookmarked ? (t("savedToBookmarks") || "Saved to bookmarks") : (t("removedFromBookmarks") || "Removed from bookmarks"));
+			toast.success(data.isBookmarked ? (t("savedToBookmarks") || "Saved") : (t("removedFromBookmarks") || "Removed"));
 			queryClient.setQueryData(["authUser"], (oldAuth) => {
 				if (!oldAuth) return oldAuth;
 				return { ...oldAuth, bookmarks: data.bookmarks };
@@ -165,13 +196,10 @@ const Post = ({ post }) => {
 		},
 	});
 
-	// 4. SHARE / REPOST MUTATION
 	const { mutate: sharePostMutation, isPending: isSharing } = useMutation({
 		mutationFn: async () => {
 			try {
-				const res = await fetch(`/api/posts/share/${targetPostId}`, {
-					method: "POST",
-				});
+				const res = await fetch(`/api/posts/share/${targetPostId}`, { method: "POST" });
 				const data = await res.json();
 				if (!res.ok) throw new Error(data.error || "Something went wrong");
 				return data;
@@ -185,7 +213,7 @@ const Post = ({ post }) => {
 				const currentReposts = p.reposts || [];
 				const updatedReposts = data.isShared
 					? [...currentReposts, authUser._id]
-					: currentReposts.filter((id) => id.toString() !== authUser._id.toString());
+					: currentReposts.filter((id) => id?.toString() !== authUser._id.toString());
 				return { ...p, reposts: updatedReposts };
 			});
 			queryClient.invalidateQueries({ queryKey: ["posts"] });
@@ -195,7 +223,6 @@ const Post = ({ post }) => {
 		},
 	});
 
-	// 5. COMMENT MUTATION
 	const { mutate: commentPost, isPending: isCommenting } = useMutation({
 		mutationFn: async () => {
 			try {
@@ -224,13 +251,10 @@ const Post = ({ post }) => {
 		},
 	});
 
-	// 6. 🗑️ DELETE COMMENT MUTATION
 	const { mutate: deleteCommentAction, isPending: isDeletingComment } = useMutation({
 		mutationFn: async (commentId) => {
 			try {
-				const res = await fetch(`/api/posts/${targetPostId}/comments/${commentId}`, {
-					method: "DELETE",
-				});
+				const res = await fetch(`/api/posts/${targetPostId}/comments/${commentId}`, { method: "DELETE" });
 				const data = await res.json();
 				if (!res.ok) throw new Error(data.error || "Failed to delete comment");
 				return { data, commentId };
@@ -264,9 +288,11 @@ const Post = ({ post }) => {
 		sharePostMutation();
 	};
 
+	// 🛡️ Safety Guard AFTER all hooks have run:
+	if (!post) return null;
+
 	return (
 		<article className='p-4 sm:p-5 border-b border-black/5 dark:border-white/[0.07] bg-base-100/50 dark:bg-surface-200/30 hover:bg-base-200/50 dark:hover:bg-surface-100/40 transition-all duration-200'>
-			{/* Shared Header Banner */}
 			{isRepost && sharerUser && (
 				<div className='flex items-center gap-2 mb-2.5 px-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400'>
 					<Repeat2 className='w-3.5 h-3.5 shrink-0' />
@@ -281,7 +307,6 @@ const Post = ({ post }) => {
 			)}
 
 			<div className='flex gap-3.5 items-start'>
-				{/* Author Avatar */}
 				<Link to={`/profile/${postOwner.username}`} className='relative shrink-0 group'>
 					<img
 						src={postOwner.profileImg || "/avatar-placeholder.png"}
@@ -290,7 +315,6 @@ const Post = ({ post }) => {
 					/>
 				</Link>
 
-				{/* Post Body */}
 				<div className='flex flex-col flex-1 min-w-0'>
 					<div className='flex items-center justify-between gap-2 mb-1.5'>
 						<div className='flex items-center gap-2 flex-wrap min-w-0'>
@@ -310,7 +334,6 @@ const Post = ({ post }) => {
 							<span className='text-xs text-slate-500 font-medium'>{formattedDate}</span>
 						</div>
 
-						{/* Delete button (owner of post or owner of repost) */}
 						{isMyPost && (
 							<button
 								onClick={() => deletePost()}
@@ -337,7 +360,6 @@ const Post = ({ post }) => {
 						</div>
 					)}
 
-					{/* Interaction Action Bar */}
 					<div className='flex items-center justify-between mt-4 pt-2 border-t border-black/5 dark:border-white/[0.04] text-slate-500 dark:text-slate-400'>
 						<button
 							onClick={() => document.getElementById("comments_modal" + targetPostId)?.showModal()}

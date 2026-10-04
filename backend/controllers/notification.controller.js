@@ -1,5 +1,17 @@
 import Notification from "../models/notification.model.js";
 
+// 🔔 Get unread notification count
+export const getUnreadNotificationCount = async (req, res) => {
+	try {
+		const userId = req.user._id;
+		const count = await Notification.countDocuments({ to: userId, read: false });
+		res.status(200).json({ count });
+	} catch (error) {
+		console.log("Error in getUnreadNotificationCount controller:", error.message);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
 export const getNotifications = async (req, res) => {
 	try {
 		const userId = req.user._id;
@@ -11,9 +23,10 @@ export const getNotifications = async (req, res) => {
 				select: "username fullName profileImg",
 			});
 
-		await Notification.updateMany({ to: userId }, { read: true });
+		// Mark all unread notifications as read when opening notification page
+		await Notification.updateMany({ to: userId, read: false }, { read: true });
 
-		res.status(200).json(notifications);
+		res.status(200).json(notifications || []);
 	} catch (error) {
 		console.log("Error in getNotifications function", error.message);
 		res.status(500).json({ error: "Internal Server Error" });

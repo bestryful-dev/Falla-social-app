@@ -2,14 +2,45 @@ import { Link, useLocation } from "react-router-dom";
 import { Home, Bell, Bookmark, User, LogOut } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { useEffect } from "react";
 import FallaLogo from "./FallaLogo";
 import ThemeLanguageControls from "./ThemeLanguageControls";
 import { useLanguage } from "../../context/LanguageContext";
+import { useSocket } from "../../context/SocketContext"; // 👈 Socket hook
 
 const Sidebar = () => {
 	const location = useLocation();
 	const queryClient = useQueryClient();
 	const { t, isRTL } = useLanguage();
+	const { socket } = useSocket();
+
+	// 1. Fetch unread notifications count
+	const { data: unreadCount = 0 } = useQuery({
+		queryKey: ["unreadNotificationsCount"],
+		queryFn: async () => {
+			try {
+				const res = await fetch("/api/notifications/unread-count");
+				const data = await res.json();
+				return data?.count || 0;
+			} catch {
+				return 0;
+			}
+		},
+	});
+
+	// 2. 🔔 Real-time notification socket listener
+	useEffect(() => {
+		if (!socket) return;
+
+		const handleNewNotification = () => {
+			queryClient.invalidateQueries({ queryKey: ["unreadNotificationsCount"] });
+			queryClient.invalidateQueries({ queryKey: ["notifications"] });
+		};
+
+		socket.on("newNotification", handleNewNotification);
+
+		return () => socket.off("newNotification", handleNewNotification);
+	}, [socket, queryClient]);
 
 	const { mutate: logout, isPending: isLoggingOut } = useMutation({
 		mutationFn: async () => {
@@ -49,6 +80,7 @@ const Sidebar = () => {
 			label: t("navNotifications"),
 			icon: Bell,
 			active: location.pathname === "/notifications",
+			isNotification: true,
 		},
 		{
 			to: "/bookmarks",
@@ -93,15 +125,24 @@ const Sidebar = () => {
 									}`}
 								>
 									<div
-										className={`p-1.5 rounded-xl transition-all duration-200 ${
+										className={`p-1.5 rounded-xl relative transition-all duration-200 ${
 											item.active
 												? "bg-gradient-to-tr from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30"
 												: "text-slate-500 dark:text-slate-400 group-hover:text-indigo-500 group-hover:bg-black/5 dark:group-hover:bg-white/[0.05]"
 										}`}
 									>
 										<IconComponent className='w-5 h-5' />
+										
+										{/* 🔔 Red Notification Badge */}
+										{item.isNotification && unreadCount > 0 && (
+											<span className='absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center animate-pulse shadow-sm'>
+												{unreadCount > 9 ? "9+" : unreadCount}
+											</span>
+										)}
 									</div>
+									
 									<span className='hidden md:block tracking-wide'>{item.label}</span>
+									
 									{item.active && (
 										<span className={`hidden md:block absolute ${isRTL ? "left-3" : "right-3"} w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#818cf8]`} />
 									)}
@@ -149,7 +190,7 @@ const Sidebar = () => {
 								</div>
 							</Link>
 
-							{/* Logout button: fully visible on all sidebar sizes */}
+							{/* Logout button */}
 							<button
 								onClick={(e) => {
 									e.preventDefault();

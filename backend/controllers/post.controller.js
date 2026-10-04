@@ -2,6 +2,7 @@ import Notification from "../models/notification.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
 import { uploadBase64Image, deleteUploadThingFile } from "../lib/utils/uploadthing.js";
+import { io, getReceiverSocketId } from "../socket/socket.js";
 
 // Helper for standard post population
 const populatePostQuery = (query) => {
@@ -113,6 +114,10 @@ export const commentOnPost = async (req, res) => {
 
 		const populatedPost = await populatePostQuery(Post.findById(postId));
 
+		// 🚀 Real-time comment broadcast
+		const newComment = populatedPost.comments[populatedPost.comments.length - 1];
+		io.emit("newComment", { postId, comment: newComment });
+
 		res.status(200).json(populatedPost);
 	} catch (error) {
 		console.log("Error in commentOnPost controller: ", error);
@@ -120,7 +125,6 @@ export const commentOnPost = async (req, res) => {
 	}
 };
 
-// 🗑️ DELETE COMMENT CONTROLLER
 export const deleteComment = async (req, res) => {
 	try {
 		const { postId, commentId } = req.params;
@@ -136,7 +140,6 @@ export const deleteComment = async (req, res) => {
 			return res.status(404).json({ error: "Comment not found" });
 		}
 
-		// Authorization: only the comment author OR the post owner can delete
 		if (comment.user.toString() !== userId && post.user.toString() !== userId) {
 			return res.status(401).json({ error: "You are not authorized to delete this comment" });
 		}
@@ -145,6 +148,10 @@ export const deleteComment = async (req, res) => {
 		await post.save();
 
 		const populatedPost = await populatePostQuery(Post.findById(postId));
+
+		// 🚀 Real-time comment deletion broadcast
+		io.emit("commentDeleted", { postId, commentId });
+
 		res.status(200).json(populatedPost);
 	} catch (error) {
 		console.log("Error in deleteComment controller: ", error);
@@ -165,17 +172,20 @@ export const likeUnlikePost = async (req, res) => {
 
 		const userLikedPost = post.likes.some((id) => id.toString() === userId.toString());
 
+		let updatedLikes;
 		if (userLikedPost) {
 			await Post.updateOne({ _id: postId }, { $pull: { likes: userId } });
 			await User.updateOne({ _id: userId }, { $pull: { likedPosts: postId } });
 
-			const updatedLikes = post.likes.filter((id) => id.toString() !== userId.toString());
-			res.status(200).json(updatedLikes);
+			updatedLikes = post.likes.filter((id) => id.toString() !== userId.toString());
 		} else {
 			post.likes.push(userId);
 			await User.updateOne({ _id: userId }, { $push: { likedPosts: postId } });
 			await post.save();
 
+			updatedLikes = post.likes;
+
+			// 🔔 Notification to post owner
 			if (post.user.toString() !== userId.toString()) {
 				const notification = new Notification({
 					from: userId,
@@ -183,11 +193,22 @@ export const likeUnlikePost = async (req, res) => {
 					type: "like",
 				});
 				await notification.save();
-			}
 
-			const updatedLikes = post.likes;
-			res.status(200).json(updatedLikes);
+				const receiverSocketId = getReceiverSocketId(post.user.toString());
+				if (receiverSocketId) {
+					const populatedNotification = await Notification.findById(notification._id).populate({
+						path: "from",
+						select: "username fullName profileImg",
+					});
+					io.to(receiverSocketId).emit("newNotification", populatedNotification);
+				}
+			}
 		}
+
+		// 🚀 Real-time like broadcast to all clients viewing the post
+		io.emit("postLikesUpdated", { postId, likes: updatedLikes });
+
+		res.status(200).json(updatedLikes);
 	} catch (error) {
 		console.log("Error in likeUnlikePost controller: ", error);
 		res.status(500).json({ error: "Internal server error" });
@@ -285,6 +306,15 @@ export const sharePost = async (req, res) => {
 					type: "share",
 				});
 				await notification.save();
+
+				const receiverSocketId = getReceiverSocketId(originalPost.user.toString());
+				if (receiverSocketId) {
+					const populatedNotification = await Notification.findById(notification._id).populate({
+						path: "from",
+						select: "username fullName profileImg",
+					});
+					io.to(receiverSocketId).emit("newNotification", populatedNotification);
+				}
 			}
 
 			const updatedOriginal = await Post.findById(originalPostId);
@@ -301,12 +331,7 @@ export const sharePost = async (req, res) => {
 export const getAllPosts = async (req, res) => {
 	try {
 		const posts = await populatePostQuery(Post.find().sort({ createdAt: -1 }));
-
-		if (!posts || posts.length === 0) {
-			return res.status(200).json([]);
-		}
-
-		res.status(200).json(posts);
+		res.status(200).json(posts || []);
 	} catch (error) {
 		console.log("Error in getAllPosts controller: ", error);
 		res.status(500).json({ error: "Internal server error" });

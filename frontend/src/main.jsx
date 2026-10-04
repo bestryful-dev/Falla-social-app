@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
+import { SocketContextProvider } from "./context/SocketContext.jsx"; // 👈 Sockets Provider
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -21,7 +22,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 			<QueryClientProvider client={queryClient}>
 				<LanguageProvider>
 					<ThemeProvider>
-						<App />
+						<SocketContextProvider> {/* 👈 Wrapped here */}
+							<App />
+						</SocketContextProvider>
 					</ThemeProvider>
 				</LanguageProvider>
 			</QueryClientProvider>

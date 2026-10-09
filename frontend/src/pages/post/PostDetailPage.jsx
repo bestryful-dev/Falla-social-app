@@ -314,6 +314,9 @@ const PostDetailPage = () => {
 				...p,
 				comments: updatedPost.comments,
 			}));
+			setTimeout(() => {
+				commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+			}, 100);
 		},
 		onError: (err) => {
 			toast.error(err.message);
@@ -678,126 +681,132 @@ const PostDetailPage = () => {
 					const hasLikedComment = commentLikes.some((id) => id?.toString() === authUser?._id?.toString());
 					const isHighlighted = highlightedCommentId === c._id;
 
+					// Arabic (RTL): My comments on RIGHT, Others on LEFT.
+					// English (LTR): My comments on LEFT, Others on RIGHT.
+					const alignRight = isRTL ? isCommentOwner : !isCommentOwner;
+
 					return (
-						<div
-							key={c._id || idx}
-							id={`comment_${c._id}`}
-							className={`flex flex-col max-w-[85%] sm:max-w-[80%] rounded-2xl p-3.5 border transition-all duration-300 relative group/comment ${
-								isCommentOwner
-									? "self-end bg-indigo-600/15 border-indigo-500/30 text-start"
-									: "self-start bg-base-200 dark:bg-surface-100/60 border-black/5 dark:border-white/[0.04] text-start"
-							} ${
-								isHighlighted
-									? "ring-2 ring-indigo-500 shadow-xl shadow-indigo-500/25 scale-[1.02]"
-									: ""
-							}`}
-						>
-							{/* Telegram-style Quoted Reply Preview */}
-							{c.replyTo && c.replyTo.commentId && (
-								<div
-									onClick={() => handleScrollToOriginal(c.replyTo.commentId)}
-									className='mb-2.5 p-2 rounded-xl bg-black/5 dark:bg-white/5 border-l-2 rtl:border-l-0 rtl:border-r-2 border-indigo-500 cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-xs'
-									title={t("replyingTo") || "Replying to"}
-								>
-									<div className='flex items-center gap-1 font-semibold text-indigo-500 text-[11px] truncate'>
-										<Reply className={`w-3 h-3 shrink-0 ${isRTL ? "rotate-180" : ""}`} />
-										<span>@{c.replyTo.username || "user"}</span>
+						<div key={c._id || idx} className={`flex w-full mb-3 ${alignRight ? "justify-end" : "justify-start"}`}>
+							<div
+								id={`comment_${c._id}`}
+								className={`flex flex-col max-w-[85%] sm:max-w-[80%] rounded-2xl p-3.5 border transition-all duration-300 relative group/comment ${
+									isCommentOwner
+										? "bg-indigo-600/15 border-indigo-500/30 text-start"
+										: "bg-base-200 dark:bg-surface-100/60 border-black/5 dark:border-white/[0.04] text-start"
+								} ${
+									isHighlighted
+										? "ring-2 ring-indigo-500 shadow-xl shadow-indigo-500/25 scale-[1.02]"
+										: ""
+								}`}
+							>
+								{/* Telegram-style Quoted Reply Preview */}
+								{c.replyTo && c.replyTo.commentId && (
+									<div
+										onClick={() => handleScrollToOriginal(c.replyTo.commentId)}
+										className='mb-2.5 p-2 rounded-xl bg-black/5 dark:bg-white/5 border-l-2 rtl:border-l-0 rtl:border-r-2 border-indigo-500 cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-xs'
+										title={t("replyingTo") || "Replying to"}
+									>
+										<div className='flex items-center gap-1 font-semibold text-indigo-500 text-[11px] truncate'>
+											<Reply className={`w-3 h-3 shrink-0 ${isRTL ? "rotate-180" : ""}`} />
+											<span>@{c.replyTo.username || "user"}</span>
+										</div>
+										{c.replyTo.text && (
+											<p className='text-slate-500 dark:text-slate-400 text-[11px] truncate mt-0.5'>
+												{c.replyTo.text}
+											</p>
+										)}
 									</div>
-									{c.replyTo.text && (
-										<p className='text-slate-500 dark:text-slate-400 text-[11px] truncate mt-0.5'>
-											{c.replyTo.text}
-										</p>
-									)}
-								</div>
-							)}
+								)}
 
-							<div className='flex items-start gap-2.5'>
-								<Link to={`/profile/${commentUser.username}`} className='shrink-0'>
-									<img
-										src={commentUser.profileImg || "/avatar-placeholder.png"}
-										alt={commentUser.username}
-										className='w-8 h-8 rounded-xl object-cover ring-1 ring-black/10 dark:ring-white/10'
-									/>
-								</Link>
+								<div className='flex items-start gap-2.5'>
+									<Link to={`/profile/${commentUser.username}`} className='shrink-0'>
+										<img
+											src={commentUser.profileImg || "/avatar-placeholder.png"}
+											alt={commentUser.username}
+											className='w-8 h-8 rounded-xl object-cover ring-1 ring-black/10 dark:ring-white/10'
+										/>
+									</Link>
 
-								<div className='flex flex-col flex-1 min-w-0'>
-									<div className='flex items-center justify-between gap-2'>
-										<div className='flex items-center gap-1.5 flex-wrap min-w-0'>
-											<Link
-												to={`/profile/${commentUser.username}`}
-												className='font-bold text-xs text-slate-800 dark:text-slate-200 hover:text-indigo-500 truncate'
-											>
-												{commentUser.fullName}
-											</Link>
-											<span className='text-[10px] text-slate-500 truncate'>
-												@{commentUser.username}
-											</span>
-											{isPostAuthor && (
-												<span className='px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20'>
-													{t("authorBadge") || "Author"}
+									<div className='flex flex-col flex-1 min-w-0'>
+										<div className='flex items-center justify-between gap-2'>
+											<div className='flex items-center gap-1.5 flex-wrap min-w-0'>
+												<Link
+													to={`/profile/${commentUser.username}`}
+													className='font-bold text-xs text-slate-800 dark:text-slate-200 hover:text-indigo-500 truncate'
+												>
+													{commentUser.fullName}
+												</Link>
+												<span className='text-[10px] text-slate-500 truncate'>
+													@{commentUser.username}
 												</span>
+												{isPostAuthor && (
+													<span className='px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20'>
+														{t("authorBadge") || "Author"}
+													</span>
+												)}
+											</div>
+
+											{canDelete && (
+												<button
+													onClick={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														deleteCommentAction(c._id);
+													}}
+													disabled={isDeletingComment}
+													title={t("deleteComment") || "Delete comment"}
+													className='opacity-0 group-hover/comment:opacity-100 p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition duration-150'
+												>
+													<Trash2 className='w-3 h-3' />
+												</button>
 											)}
 										</div>
 
-										{canDelete && (
+										{/* Comment Content */}
+										<p className='text-xs text-slate-700 dark:text-slate-200 mt-1 leading-relaxed break-words whitespace-pre-line'>
+											{c.text}
+										</p>
+
+										{/* Reply & Like Buttons */}
+										<div className='flex items-center gap-3 mt-2 pt-1.5 border-t border-black/5 dark:border-white/[0.04] text-slate-500 dark:text-slate-400'>
 											<button
-												onClick={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													deleteCommentAction(c._id);
+												type='button'
+												onClick={() => {
+													setReplyingTo({
+														commentId: c._id,
+														username: commentUser.username || "",
+														text: c.text?.slice(0, 70) || "",
+													});
+													commentInputRef.current?.focus();
 												}}
-												disabled={isDeletingComment}
-												title={t("deleteComment") || "Delete comment"}
-												className='opacity-0 group-hover/comment:opacity-100 p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition duration-150'
+												className='flex items-center gap-1 text-[11px] font-medium hover:text-indigo-500 transition-colors'
 											>
-												<Trash2 className='w-3 h-3' />
+												<Reply className={`w-3 h-3 ${isRTL ? "rotate-180" : ""}`} />
+												<span>{t("replyButton") || "Reply"}</span>
 											</button>
-										)}
-									</div>
 
-									{/* Comment Content */}
-									<p className='text-xs text-slate-700 dark:text-slate-200 mt-1 leading-relaxed break-words whitespace-pre-line'>
-										{c.text}
-									</p>
-
-									{/* Reply & Like Buttons */}
-									<div className='flex items-center gap-3 mt-2 pt-1.5 border-t border-black/5 dark:border-white/[0.04] text-slate-500 dark:text-slate-400'>
-										<button
-											type='button'
-											onClick={() => {
-												setReplyingTo({
-													commentId: c._id,
-													username: commentUser.username || "",
-													text: c.text?.slice(0, 70) || "",
-												});
-												commentInputRef.current?.focus();
-											}}
-											className='flex items-center gap-1 text-[11px] font-medium hover:text-indigo-500 transition-colors'
-										>
-											<Reply className={`w-3 h-3 ${isRTL ? "rotate-180" : ""}`} />
-											<span>{t("replyButton") || "Reply"}</span>
-										</button>
-
-										<button
-											type='button'
-											onClick={() => likeCommentMutation(c._id)}
-											className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${
-												hasLikedComment ? "text-rose-500 font-semibold" : "hover:text-rose-500"
-											}`}
-										>
-											<Heart
-												className={`w-3 h-3 transition-transform ${
-													hasLikedComment ? "fill-rose-500 text-rose-500 scale-110" : ""
+											<button
+												type='button'
+												onClick={() => likeCommentMutation(c._id)}
+												className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${
+													hasLikedComment ? "text-rose-500 font-semibold" : "hover:text-rose-500"
 												}`}
-											/>
-											<span>{commentLikes.length > 0 ? commentLikes.length : 0}</span>
-										</button>
+											>
+												<Heart
+													className={`w-3 h-3 transition-transform ${
+														hasLikedComment ? "fill-rose-500 text-rose-500 scale-110" : ""
+													}`}
+												/>
+												<span>{commentLikes.length > 0 ? commentLikes.length : 0}</span>
+											</button>
+										</div>
 									</div>
 								</div>
 							</div>
 						</div>
 					);
 				})}
+				<div ref={commentsEndRef} />
 			</div>
 		</div>
 	);

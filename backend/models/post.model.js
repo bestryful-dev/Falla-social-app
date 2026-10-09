@@ -34,6 +34,18 @@ const postSchema = new mongoose.Schema(
 					type: Date,
 					default: Date.now,
 				},
+				likes: [
+					{
+						type: mongoose.Schema.Types.ObjectId,
+						ref: "User",
+						default: [],
+					},
+				],
+				replyTo: {
+					commentId: { type: String, default: null },
+					username: { type: String, default: null },
+					text: { type: String, default: null },
+				},
 			},
 		],
 		// Shared / Repost reference: if set, this post represents a share of original post

@@ -64,7 +64,12 @@ export const translations = {
 		writeReplyPlaceholder: "Write your reply...",
 		replyButton: "Reply",
 		commentAddedToast: "Comment added",
+		authorBadge: "Author",
+		replyingTo: "Replying to",
+		cancelReply: "Cancel reply",
 		close: "Close",
+		postHeader: "Post",
+		postNotFound: "Post not found",
 
 		// Bookmarks Page
 		bookmarksTitle: "Bookmarks",
@@ -100,6 +105,8 @@ export const translations = {
 		allCaughtUpDesc: "No new notifications right now. When people follow you or interact with your posts, they will show up here.",
 		followedYou: "followed you",
 		likedYourPost: "liked your post",
+		commentedOnPost: "commented on your post",
+		repliedToYourComment: "replied to your comment",
 		notificationsClearedToast: "All notifications cleared",
 
 		// Profile
@@ -219,7 +226,12 @@ export const translations = {
 		writeReplyPlaceholder: "اكتب ردك هنا...",
 		replyButton: "رد",
 		commentAddedToast: "تمت إضافة تعليقك بنجاح",
+		authorBadge: "صاحب المنشور",
+		replyingTo: "الرد على",
+		cancelReply: "إلغاء الرد",
 		close: "إغلاق",
+		postHeader: "منشور",
+		postNotFound: "المنشور غير موجود",
 
 		// Bookmarks Page
 		bookmarksTitle: "المحفوظات",
@@ -255,6 +267,8 @@ export const translations = {
 		allCaughtUpDesc: "لا توجد إشعارات جديدة الآن. عندما يتفاعل أحد مع منشوراتك أو يتابعك، ستظهر هنا.",
 		followedYou: "بدأ بمتابعتك",
 		likedYourPost: "أعجب بمنشورك",
+		commentedOnPost: "علق على منشورك",
+		repliedToYourComment: "رد على تعليقك",
 		notificationsClearedToast: "تم مسح جميع الإشعارات بنجاح",
 
 		// Profile

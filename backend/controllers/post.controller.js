@@ -94,7 +94,7 @@ export const deletePost = async (req, res) => {
 
 export const commentOnPost = async (req, res) => {
 	try {
-		const { text } = req.body;
+		const { text, replyTo } = req.body;
 		const postId = req.params.id;
 		const userId = req.user._id;
 
@@ -107,7 +107,17 @@ export const commentOnPost = async (req, res) => {
 			return res.status(404).json({ error: "Post not found" });
 		}
 
-		const comment = { user: userId, text: text.trim(), createdAt: new Date() };
+		const comment = {
+			user: userId,
+			text: text.trim(),
+			createdAt: new Date(),
+			likes: [],
+			replyTo: replyTo && replyTo.commentId ? {
+				commentId: replyTo.commentId,
+				username: replyTo.username || "",
+				text: replyTo.text || "",
+			} : undefined,
+		};
 
 		post.comments.push(comment);
 		await post.save();
@@ -118,12 +128,40 @@ export const commentOnPost = async (req, res) => {
 		const newComment = populatedPost.comments[populatedPost.comments.length - 1];
 		io.emit("newComment", { postId, comment: newComment });
 
-		// 🔔 Create and send comment notification to post owner
-		if (post.user.toString() !== userId.toString()) {
+		// 🔔 Reply & Comment Notifications
+		let repliedUserId = null;
+		if (replyTo?.commentId) {
+			const parentComment = post.comments.id(replyTo.commentId) || post.comments.find((c) => c._id.toString() === replyTo.commentId);
+			if (parentComment && parentComment.user.toString() !== userId.toString()) {
+				repliedUserId = parentComment.user.toString();
+				const replyNotification = new Notification({
+					from: userId,
+					to: parentComment.user,
+					type: "reply",
+					post: postId,
+					commentId: newComment?._id?.toString() || null,
+				});
+				await replyNotification.save();
+
+				const receiverSocketId = getReceiverSocketId(parentComment.user.toString());
+				if (receiverSocketId) {
+					const populatedNotification = await Notification.findById(replyNotification._id).populate({
+						path: "from",
+						select: "username fullName profileImg",
+					});
+					io.to(receiverSocketId).emit("newNotification", populatedNotification);
+				}
+			}
+		}
+
+		// 🔔 Create and send comment notification to post owner (if not the author and not already notified via reply)
+		if (post.user.toString() !== userId.toString() && post.user.toString() !== repliedUserId) {
 			const notification = new Notification({
 				from: userId,
 				to: post.user,
 				type: "comment",
+				post: postId,
+				commentId: newComment?._id?.toString() || null,
 			});
 			await notification.save();
 
@@ -178,6 +216,69 @@ export const deleteComment = async (req, res) => {
 	}
 };
 
+export const likeComment = async (req, res) => {
+	try {
+		const { postId, commentId } = req.params;
+		const userId = req.user._id;
+
+		const post = await Post.findById(postId);
+		if (!post) {
+			return res.status(404).json({ error: "Post not found" });
+		}
+
+		const comment = post.comments.id(commentId) || post.comments.find((c) => c._id.toString() === commentId);
+		if (!comment) {
+			return res.status(404).json({ error: "Comment not found" });
+		}
+
+		if (!comment.likes) {
+			comment.likes = [];
+		}
+
+		const hasLiked = comment.likes.some((id) => id.toString() === userId.toString());
+		let updatedLikes;
+
+		if (hasLiked) {
+			comment.likes = comment.likes.filter((id) => id.toString() !== userId.toString());
+			updatedLikes = comment.likes;
+		} else {
+			comment.likes.push(userId);
+			updatedLikes = comment.likes;
+
+			// 🔔 If liking someone else's comment, create and emit notification
+			if (comment.user.toString() !== userId.toString()) {
+				const notification = new Notification({
+					from: userId,
+					to: comment.user,
+					type: "like",
+					post: postId,
+					commentId: commentId,
+				});
+				await notification.save();
+
+				const receiverSocketId = getReceiverSocketId(comment.user.toString());
+				if (receiverSocketId) {
+					const populatedNotification = await Notification.findById(notification._id).populate({
+						path: "from",
+						select: "username fullName profileImg",
+					});
+					io.to(receiverSocketId).emit("newNotification", populatedNotification);
+				}
+			}
+		}
+
+		await post.save();
+
+		// 🚀 Real-time comment likes broadcast
+		io.emit("commentLikesUpdated", { postId, commentId, likes: updatedLikes });
+
+		res.status(200).json({ commentId, likes: updatedLikes });
+	} catch (error) {
+		console.log("Error in likeComment controller: ", error);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
 export const likeUnlikePost = async (req, res) => {
 	try {
 		const userId = req.user._id;
@@ -210,6 +311,7 @@ export const likeUnlikePost = async (req, res) => {
 					from: userId,
 					to: post.user,
 					type: "like",
+					post: postId,
 				});
 				await notification.save();
 
@@ -324,6 +426,7 @@ export const sharePost = async (req, res) => {
 					from: userId,
 					to: originalPost.user,
 					type: "share",
+					post: originalPostId,
 				});
 				await notification.save();
 
@@ -409,6 +512,20 @@ export const getUserPosts = async (req, res) => {
 		res.status(200).json(posts || []);
 	} catch (error) {
 		console.log("Error in getUserPosts controller: ", error);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+export const getPostById = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const post = await populatePostQuery(Post.findById(id));
+		if (!post) {
+			return res.status(404).json({ error: "Post not found" });
+		}
+		res.status(200).json(post);
+	} catch (error) {
+		console.log("Error in getPostById controller: ", error);
 		res.status(500).json({ error: "Internal server error" });
 	}
 };

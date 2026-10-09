@@ -7,6 +7,7 @@ import SignUpPage from "./pages/auth/signup/SignUpPage";
 import NotificationPage from "./pages/notification/NotificationPage";
 import BookmarksPage from "./pages/bookmarks/BookmarksPage";
 import ProfilePage from "./pages/profile/ProfilePage";
+import PostDetailPage from "./pages/post/PostDetailPage";
 
 import Sidebar from "./components/common/Sidebar";
 import RightPanel from "./components/common/RightPanel";
@@ -166,6 +167,7 @@ function App() {
 						<Route path='/notifications' element={authUser ? <NotificationPage /> : <Navigate to='/login' />} />
 						<Route path='/bookmarks' element={authUser ? <BookmarksPage /> : <Navigate to='/login' />} />
 						<Route path='/profile/:username' element={authUser ? <ProfilePage /> : <Navigate to='/login' />} />
+						<Route path='/post/:id' element={authUser ? <PostDetailPage /> : <Navigate to='/login' />} />
 					</Routes>
 				</main>
 

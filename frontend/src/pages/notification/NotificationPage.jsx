@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useEffect } from "react";
-import { Bell, Heart, UserPlus, Repeat2, MessageCircle, MoreVertical, Trash2, CheckCheck, AlertCircle } from "lucide-react";
+import { Bell, Heart, UserPlus, Repeat2, MessageCircle, MoreVertical, Trash2, CheckCheck, AlertCircle, CornerUpRight } from "lucide-react";
 
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { useLanguage } from "../../context/LanguageContext";
@@ -149,12 +149,23 @@ const NotificationPage = () => {
 						const isLike = notification.type === "like";
 						const isShare = notification.type === "share" || notification.type === "repost";
 						const isComment = notification.type === "comment";
+						const isReply = notification.type === "reply";
 						const isUnread = !notification.read;
 						const sender = notification.from || {};
 
+						// Compute deep-link destination
+						let targetUrl = `/profile/${sender.username || ""}`;
+						if (isLike || isComment || isReply || isShare) {
+							if (notification.post) {
+								const postId = typeof notification.post === "object" ? notification.post._id : notification.post;
+								const commentQuery = notification.commentId ? `?commentId=${notification.commentId}` : "";
+								targetUrl = `/post/${postId}${commentQuery}`;
+							}
+						}
+
 						return (
 							<Link
-								to={`/profile/${sender.username || ""}`}
+								to={targetUrl}
 								key={notification._id}
 								className={`flex items-center gap-4 p-4 transition-all duration-200 group relative ${
 									isUnread
@@ -187,6 +198,11 @@ const NotificationPage = () => {
 									{isComment && (
 										<div className='w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform'>
 											<MessageCircle className='w-5 h-5' />
+										</div>
+									)}
+									{isReply && (
+										<div className='w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform'>
+											<CornerUpRight className='w-5 h-5' />
 										</div>
 									)}
 								</div>
@@ -222,6 +238,10 @@ const NotificationPage = () => {
 										) : isComment ? (
 											<span className='text-amber-600 dark:text-amber-400 font-medium'>
 												{t("commentedOnPost") || "commented on your post"}
+											</span>
+										) : isReply ? (
+											<span className='text-indigo-600 dark:text-indigo-300 font-medium'>
+												{t("repliedToYourComment") || "replied to your comment"}
 											</span>
 										) : (
 											<span className='text-rose-500 dark:text-rose-400 font-medium'>

@@ -681,9 +681,10 @@ const PostDetailPage = () => {
 					const hasLikedComment = commentLikes.some((id) => id?.toString() === authUser?._id?.toString());
 					const isHighlighted = highlightedCommentId === c._id;
 
-					// Arabic (RTL): My comments on RIGHT, Others on LEFT.
-					// English (LTR): My comments on LEFT, Others on RIGHT.
-					const alignRight = isRTL ? isCommentOwner : !isCommentOwner;
+					// Inverted:
+					// In English (LTR): My comments on the RIGHT, others on the LEFT.
+					// In Arabic (RTL): My comments on the LEFT, others on the RIGHT.
+					const alignRight = isRTL ? !isCommentOwner : isCommentOwner;
 
 					return (
 						<div key={c._id || idx} className={`flex w-full mb-3 ${alignRight ? "justify-end" : "justify-start"}`}>

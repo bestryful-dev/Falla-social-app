@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Link as LinkIcon, Camera, Sparkles, Check, Heart, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, Link as LinkIcon, Camera, Sparkles, Check, Heart, FileText, Users, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import Posts from "../../components/common/Posts";
@@ -16,6 +16,7 @@ const ProfilePage = () => {
 	const [coverImg, setCoverImg] = useState(null);
 	const [profileImg, setProfileImg] = useState(null);
 	const [feedType, setFeedType] = useState("posts");
+	const [followModalType, setFollowModalType] = useState(null); // 'followers' | 'following' | null
 	const { t, isRTL, language } = useLanguage();
 
 	const coverImgRef = useRef(null);
@@ -258,14 +259,28 @@ const ProfilePage = () => {
 
 						{/* Follow stats counter cards */}
 						<div className='flex gap-3 pt-1'>
-							<div className='px-3.5 py-1.5 rounded-xl bg-base-200 dark:bg-surface-100/60 border border-black/5 dark:border-white/[0.05] flex items-center gap-1.5'>
+							<button
+								type='button'
+								onClick={() => {
+									setFollowModalType("following");
+									document.getElementById("follow_modal")?.showModal();
+								}}
+								className='px-3.5 py-1.5 rounded-xl bg-base-200 dark:bg-surface-100/60 border border-black/5 dark:border-white/[0.05] hover:border-indigo-500/40 hover:bg-indigo-500/10 flex items-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-95'
+							>
 								<span className='font-bold text-sm text-slate-900 dark:text-white'>{user?.following?.length || 0}</span>
 								<span className='text-xs text-slate-500 dark:text-slate-400'>{t("followingCount")}</span>
-							</div>
-							<div className='px-3.5 py-1.5 rounded-xl bg-base-200 dark:bg-surface-100/60 border border-black/5 dark:border-white/[0.05] flex items-center gap-1.5'>
+							</button>
+							<button
+								type='button'
+								onClick={() => {
+									setFollowModalType("followers");
+									document.getElementById("follow_modal")?.showModal();
+								}}
+								className='px-3.5 py-1.5 rounded-xl bg-base-200 dark:bg-surface-100/60 border border-black/5 dark:border-white/[0.05] hover:border-indigo-500/40 hover:bg-indigo-500/10 flex items-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-95'
+							>
 								<span className='font-bold text-sm text-slate-900 dark:text-white'>{user?.followers?.length || 0}</span>
 								<span className='text-xs text-slate-500 dark:text-slate-400'>{t("followers")}</span>
-							</div>
+							</button>
 						</div>
 					</div>
 
@@ -304,6 +319,111 @@ const ProfilePage = () => {
 					<Posts feedType={feedType} username={username} userId={user?._id} />
 				</div>
 			)}
+
+			{/* Followers / Following DaisyUI Modal */}
+			<dialog id='follow_modal' className='modal modal-bottom sm:modal-middle'>
+				<div className='modal-box bg-base-100 dark:bg-[#111622] border border-black/10 dark:border-white/10 rounded-3xl p-5 shadow-2xl max-w-md transition-colors duration-200'>
+					<div className='flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10'>
+						<div className='flex items-center gap-2'>
+							<Users className='w-4 h-4 text-indigo-500' />
+							<h3 className='font-bold text-base text-slate-900 dark:text-white'>
+								{followModalType === "followers" ? (t("followers") || "Followers") : (t("followingCount") || "Following")}
+							</h3>
+							<span className='px-2 py-0.5 rounded-full text-xs bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-semibold'>
+								{followModalType === "followers"
+									? (user?.followers?.length || 0)
+									: (user?.following?.length || 0)}
+							</span>
+						</div>
+						<form method='dialog'>
+							<button className='btn btn-sm btn-circle btn-ghost text-slate-400 hover:text-slate-900 dark:hover:text-white'>
+								<X className='w-4 h-4' />
+							</button>
+						</form>
+					</div>
+
+					{/* Users List Container */}
+					<div className='flex flex-col gap-2 max-h-80 overflow-y-auto my-3 pr-1 divide-y divide-black/5 dark:divide-white/[0.04]'>
+						{(() => {
+							const list = followModalType === "followers" ? (user?.followers || []) : (user?.following || []);
+							if (!list || list.length === 0) {
+								return (
+									<div className='text-center py-10 text-slate-400 flex flex-col items-center gap-2'>
+										<Users className='w-8 h-8 text-slate-400 opacity-60' />
+										<p className='text-xs'>
+											{followModalType === "followers"
+												? (t("noFollowersYet") || "No followers yet")
+												: (t("noFollowingYet") || "No following yet")}
+										</p>
+									</div>
+								);
+							}
+
+							return list.map((u) => {
+								if (!u || typeof u !== "object") return null;
+								const isMe = authUser?._id?.toString() === u._id?.toString();
+								const amIFollowingThisUser = authUser?.following?.includes(u._id);
+
+								return (
+									<div
+										key={u._id}
+										className='flex items-center justify-between gap-3 py-2.5 px-1 hover:bg-black/5 dark:hover:bg-white/[0.03] rounded-2xl transition-colors duration-150'
+									>
+										<Link
+											to={`/profile/${u.username}`}
+											onClick={() => document.getElementById("follow_modal")?.close()}
+											className='flex items-center gap-3 min-w-0 flex-1 group'
+										>
+											<img
+												src={u.profileImg || "/avatar-placeholder.png"}
+												alt={u.username}
+												className='w-10 h-10 rounded-2xl object-cover ring-1 ring-black/10 dark:ring-white/10 group-hover:ring-indigo-500 transition duration-200 shrink-0'
+											/>
+											<div className='flex flex-col min-w-0 text-start'>
+												<span className='font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-indigo-500 transition'>
+													{u.fullName}
+												</span>
+												<span className='text-[11px] text-slate-500 dark:text-slate-400 truncate'>
+													@{u.username}
+												</span>
+												{u.bio && (
+													<span className='text-[10px] text-slate-400 truncate mt-0.5 max-w-xs'>
+														{u.bio}
+													</span>
+												)}
+											</div>
+										</Link>
+
+										{!isMe && (
+											<button
+												type='button'
+												disabled={isFollowingPending}
+												onClick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													follow(u._id);
+												}}
+												className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-95 shrink-0 ${
+													amIFollowingThisUser
+														? "bg-base-200 dark:bg-surface-100 border border-black/10 dark:border-white/15 text-slate-700 dark:text-slate-200 hover:border-rose-500/50 hover:text-rose-500 hover:bg-rose-500/10"
+														: "gradient-btn"
+												}`}
+											>
+												{amIFollowingThisUser
+													? (t("following") || "Following")
+													: (t("follow") || "Follow")}
+											</button>
+										)}
+									</div>
+								);
+							});
+						})()}
+					</div>
+				</div>
+				<form method='dialog' className='modal-backdrop bg-black/60 backdrop-blur-sm'>
+					<button className='cursor-default'>{t("close") || "Close"}</button>
+				</form>
+			</dialog>
 		</div>
 	);
 };

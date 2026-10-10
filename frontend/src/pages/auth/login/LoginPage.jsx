@@ -201,7 +201,7 @@ const LoginPage = () => {
 							>
 								<div className='flex items-center gap-3'>
 									<div className='w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform'>
-										<FallaLogo className='w-5 h-5' />
+										<Smartphone className='w-5 h-5' />
 									</div>
 									<div className='text-start'>
 										<p className='text-xs font-bold text-slate-900 dark:text-slate-100'>

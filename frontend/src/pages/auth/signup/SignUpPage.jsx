@@ -275,8 +275,8 @@ const SignUpPage = () => {
             {/* 📱 Download Android APK Button */}
             <div className="mt-5">
               <a
-                href="/falla-social.apk"
-                download="falla-social.apk"
+                href="/naba-social.apk"
+                download="naba-social.apk"
                 className="w-full flex items-center justify-between p-3 rounded-2xl bg-base-200/60 dark:bg-surface-100/60 border border-black/5 dark:border-white/10 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all group"
               >
                 <div className="flex items-center gap-3">
@@ -285,7 +285,7 @@ const SignUpPage = () => {
                   </div>
                   <div className="text-start">
                     <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      {isRTL ? "تحميل تطبيق أندرويد" : "Download Android App"}
+                      {isRTL ? "تحميل تطبيق نبأ" : "Download Naba App"}
                     </p>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">
                       {isRTL ? "ملف APK مباشر للهاتف" : "Direct APK file for your phone"}

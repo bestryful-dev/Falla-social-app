@@ -1,7 +1,7 @@
 export const translations = {
 	en: {
 		// Brand
-		brandName: "Falla Social",
+		brandName: "Naba Social",
 		brandTagline: "Next-Gen Social Network",
 		heroHeading: "Where thoughts connect and communities grow.",
 		heroSubheading: "Experience a refined feed designed for creators, thinkers, and conversations that matter.",
@@ -41,7 +41,7 @@ export const translations = {
 		emoji: "Emoji",
 		postButton: "Post",
 		postingButton: "Publishing...",
-		postSuccessToast: "Post published to Falla Feed!",
+		postSuccessToast: "Post published to Naba Feed!",
 		postEmptyToast: "Please provide text or an image",
 		charsCount: "chars",
 
@@ -81,9 +81,9 @@ export const translations = {
 		noPostsTitle: "No posts found here yet",
 		noPostsFollowingDesc: "Follow creators to see their latest updates right on your feed.",
 		noPostsLikesDesc: "No liked posts yet. Tap heart on posts that resonate with you!",
-		noPostsDiscoverDesc: "Be the first to share an inspiring update on Falla Social!",
+		noPostsDiscoverDesc: "Be the first to share an inspiring update on Naba Social!",
 		userNotFoundTitle: "User does not exist",
-		userNotFoundDesc: "Try searching for another member on Falla Social.",
+		userNotFoundDesc: "Try searching for another member on Naba Social.",
 		backToFeed: "Back to Feed",
 
 		// Right Panel / Suggested Users
@@ -91,7 +91,7 @@ export const translations = {
 		follow: "Follow",
 		following: "Following",
 		unfollow: "Unfollow",
-		fallaExperience: "Falla Social Experience",
+		fallaExperience: "Naba Social Experience",
 		fallaExperienceDesc: "Share your thoughts, discover trending creators, and interact in real-time on a modern decentralized-inspired social feed.",
 		terms: "Terms",
 		privacy: "Privacy",
@@ -145,18 +145,18 @@ export const translations = {
 
 		// Auth: Login & Signup
 		welcomeBack: "Welcome back",
-		loginSubtitle: "Enter your credentials to access your Falla account",
-		enterFallaSocial: "Enter Falla Social",
+		loginSubtitle: "Enter your credentials to access your Naba account",
+		enterFallaSocial: "Enter Naba Social",
 		signingIn: "Signing In...",
-		newToFalla: "New to Falla Social?",
+		newToFalla: "New to Naba Social?",
 		createAccountLink: "Create an account",
 		createAccountTitle: "Create account",
-		signupSubtitle: "Join the Falla Social community today",
+		signupSubtitle: "Join the Naba Social community today",
 		createAccountButton: "Create Account",
 		creatingAccountButton: "Creating Account...",
 		alreadyHaveAccount: "Already have an account?",
 		signInLink: "Sign in",
-		accountCreatedToast: "Welcome to Falla Social!",
+		accountCreatedToast: "Welcome to Naba Social!",
 		logoutSuccessToast: "Signed out successfully",
 		logoutFailedToast: "Logout failed",
 
@@ -255,7 +255,7 @@ export const translations = {
 		follow: "متابعة",
 		following: "متابَع",
 		unfollow: "إلغاء المتابعة",
-		fallaExperience: "تجربة فلة سوشيال",
+		fallaExperience: "تجربة نبأ سوشيال",
 		fallaExperienceDesc: "شارك أفكارك، واكتشف صانعي المحتوى، وتفاعل بلحظات حقيقية على منصة تواصل حديثة وسريعة.",
 		terms: "الشروط",
 		privacy: "الخصوصية",
@@ -310,9 +310,9 @@ export const translations = {
 		// Auth: Login & Signup
 		welcomeBack: "مرحباً بعودتك",
 		loginSubtitle: "أدخل بياناتك للمتابعة إلى حسابك في فلة",
-		enterFallaSocial: "دخول فلة سوشيال",
+		enterFallaSocial: "دخول نبأ سوشيال",
 		signingIn: "جاري تسجيل الدخول...",
-		newToFalla: "جديد في فلة سوشيال؟",
+		newToFalla: "جديد في نبأ سوشيال؟",
 		createAccountLink: "إنشاء حساب جديد",
 		createAccountTitle: "إنشاء حساب",
 		signupSubtitle: "انضم إلى مجتمع فلة سوشيال الآن",

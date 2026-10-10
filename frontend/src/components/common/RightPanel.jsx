@@ -111,7 +111,7 @@ const RightPanel = () => {
 						<span>{t("terms")}</span>
 						<span>{t("privacy")}</span>
 						<span>{t("safety")}</span>
-						<span>© {new Date().getFullYear()} {isRTL ? "فلة" : "Falla"}</span>
+						<span>© {new Date().getFullYear()} {isRTL ? "نبأ" : "Naba"}</span>
 					</div>
 				</div>
 

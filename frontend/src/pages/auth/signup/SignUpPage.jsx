@@ -127,7 +127,7 @@ const SignUpPage = () => {
 
           <div className="text-xs text-slate-500 relative z-10">
             © {new Date().getFullYear()}{" "}
-            {isRTL ? "فلة سوشيال." : "Falla Social."}
+            {isRTL ? " نبأ." : "Naba social"}
           </div>
         </div>
 

@@ -104,7 +104,7 @@ const LoginPage = () => {
 					</div>
 
 					<div className='text-xs text-slate-500 relative z-10'>
-						© {new Date().getFullYear()} {isRTL ? "فلة سوشيال." : "Falla Social."} {t("rightsReserved")}
+						© {new Date().getFullYear()} {isRTL ? " نبأ." : "Naba."} {t("rightsReserved")}
 					</div>
 				</div>
 
@@ -195,17 +195,17 @@ const LoginPage = () => {
 						{/* 📱 Download Android APK Button */}
 						<div className='mt-6'>
 							<a
-								href='/falla-social.apk'
-								download='falla-social.apk'
+								href='/naba-social.apk'
+								download='naba-social.apk'
 								className='w-full flex items-center justify-between p-3 rounded-2xl bg-base-200/60 dark:bg-surface-100/60 border border-black/5 dark:border-white/10 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all group'
 							>
 								<div className='flex items-center gap-3'>
 									<div className='w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform'>
-										<Smartphone className='w-5 h-5' />
+										<FallaLogo className='w-5 h-5' />
 									</div>
 									<div className='text-start'>
 										<p className='text-xs font-bold text-slate-900 dark:text-slate-100'>
-											{isRTL ? "تحميل تطبيق أندرويد" : "Download Android App"}
+											{isRTL ? "تحميل تطبيق نبأ" : "Download Naba App"}
 										</p>
 										<p className='text-[10px] text-slate-500 dark:text-slate-400'>
 											{isRTL ? "ملف APK مباشر للهاتف" : "Direct APK file for your phone"}
